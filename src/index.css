@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+/* 1. Importando a fonte Fredoka */
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap');
+
+@theme {
+  /* --- CORES --- */
+  /* Ajustei para um bege mais visível e aconchegante */
+  --color-brand-light: #fcfaf4; 
+  
+  --color-brand-blue: #0ea5e9;
+  --color-brand-dark: #0284c7;
+  --color-brand-pink: #ec4899;
+  --color-brand-purple: #a855f7;
+  --color-brand-yellow: #f7b731; /* Adicionei o amarelo caso precise */
+
+  /* --- FONTES --- */
+  --font-sans: "Fredoka", sans-serif; 
+  
+  /* --- ANIMAÇÕES --- */
+  --animate-float: float 6s ease-in-out infinite;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+  }
+}
+
+/* --- 2. APLICANDO O FUNDO (O que faltava) --- */
+body {
+  background-color: var(--color-brand-light); /* Aplica o bege */
+  color: #334155; /* Texto cinza escuro (slate-700) para leitura confortável */
+}
+
+/* Animação Wave (se ainda for usar em algum lugar) */
+@keyframes textWave {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+.text-wave-effect {
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: textWave 8s linear infinite;
+}
+
+/* --- UTILITÁRIOS EXTRAS --- */
+@utility gradient-creative {
+  @apply bg-gradient-to-r from-brand-pink via-brand-purple to-brand-blue bg-clip-text text-transparent;
+}
