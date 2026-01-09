@@ -1,47 +1,44 @@
-# 🎨 SITE-TRALALA - E-commerce de Personalizados
+# 🎨 Tralalá Criativo 
+### *Arte que aquece o coração* 💖
 
-Este é o projeto **Tralalá Criativo**, um e-commerce moderno e fluido especializado em produtos personalizados (canecas, camisetas, azulejos, etc.), construído com as tecnologias mais recentes do mercado.
-
-## 🚀 Tecnologias
-- **Frontend:** React 19 + Vite 7 + TailwindCSS 4
-- **Animações:** Framer Motion (Otimizado para baixa memória)
-- **Backend/DB:** Supabase (Auth, Postgres, Edge Functions)
-- **Pagamentos:** Stripe (Checkout Session)
-- **Deployment:** Vercel
-
-## 📦 Como Rodar Localmente
-1. Clone o repositório.
-2. Instale as dependências: `npm install`
-3. Crie um arquivo `.env` baseado no [.env.example](.env.example).
-4. Inicie o servidor: `npm run dev`
+O **Tralalá Criativo** é uma experiência de e-commerce moderna e imersiva, focada na venda de produtos personalizados que transformam ideias em presentes inesquecíveis. De canecas a azulejos decorativos, cada detalhe foi pensado para proporcionar uma jornada de compra fluida, visualmente deslumbrante e emocionalmente conectada.
 
 ---
 
-## 🌍 Deployment na Vercel
+## 🌟 Diferenciais do Projeto
 
-Para colocar o site online na Vercel, segue estes passos:
+### � Design Premium & Fluidas Experiências
+*   **Aparência Moderna:** Interface baseada em princípios de *Glassmorphism* com cores vibrantes e harmônicas.
+*   **Micro-interações:** Transições suaves e animações de entrada que dão vida ao site usando **Framer Motion**.
+*   **Performance Otimizada:** Carregamento inteligente de recursos para garantir uma navegação rápida e responsiva em qualquer dispositivo.
 
-1. **Importar o Projeto:** Liga o teu GitHub à Vercel e seleciona este repositório.
-2. **Configuração do Framework:** A Vercel deteta automaticamente que é um projeto **Vite**.
-3. **Environment Variables (CRÍTICO):** No painel da Vercel, adiciona as seguintes chaves:
-   - `VITE_SUPABASE_URL`: O URL do teu projeto Supabase.
-   - `VITE_SUPABASE_ANON_KEY`: A chave anónima do Supabase.
-   - `VITE_STRIPE_PUBLISHABLE_KEY`: A tua chave pública do Stripe (começa com `pk_...`).
-   - `VITE_SUCCESS_URL`: O URL de retorno após sucesso (ex: `https://teu-site.vercel.app/sucesso`).
-   - `VITE_CANCEL_URL`: O URL de retorno após cancelamento (ex: `https://teu-site.vercel.app/cancelado`).
+### �️ Personalização Inteligente
+*   **Fluxo de Seleção:** Os usuários podem escolher e configurar detalhes dos seus produtos favoritos de forma intuitiva.
+*   **Visualização Dinâmica:** Exibição clara de imagens e descrições para garantir que o cliente saiba exatamente o que está comprando.
 
-## 🛠️ Configuração do Supabase (Edge Functions)
-Para que o checkout funcione, não te esqueças de configurar a secret key no Supabase:
-```bash
-# Se tiveres a CLI do Supabase
-supabase secrets set STRIPE_SECRET_KEY=sk_test_...
+### 💳 Checkout de Próxima Geração
+*   **Stripe Integration:** Processamento de pagamentos seguro e rápido através do Stripe Checkout.
+*   **Gestão de Carrinho Real-time:** Adição, edição e remoção de itens com feedback visual imediato.
 
-# OU diretamente no Dashboard do Supabase em Edge Functions -> Secrets
-```
+---
 
-## 📄 Estrutura de Pastas
-- `/src/components`: UI Components (Header, Footer, Cart, Login Modal).
-- `/src/context`: Gestão de Estado (Auth, Carrinho).
-- `/src/pages`: Páginas da aplicação.
-- `/src/services`: Clientes Supabase e Stripe.
-- `/supabase/functions`: Lógica de backend para o Stripe.
+## 🛠️ Stack Tecnológica
+
+O projeto utiliza o que há de mais avançado no ecossistema de desenvolvimento web:
+
+*   **⚡ Frontend:** [React 19](https://react.dev/) + [Vite 7](https://vitejs.dev/) para máxima performance.
+*   **🎨 Estilização:** [TailwindCSS 4](https://tailwindcss.com/) para um design responsivo e consistente.
+*   **✨ Animações:** [Framer Motion](https://www.framer.com/motion/) para interações fluidas.
+*   **☁️ Backend-as-a-Service:** [Supabase](https://supabase.com/) cuidando de Autenticação, Banco de Dados Relacional (PostgreSQL) e Edge Functions.
+*   **💰 Pagamentos:** [Stripe API](https://stripe.com/) para uma infraestrutura de checkout confiável.
+*   **🚀 Hospedagem:** [Vercel](https://vercel.com/) para deploy contínuo e escalabilidade global.
+
+---
+
+## 📈 Próximos Passos
+*   [ ] Implementação de **Visualização 3D** interativa para canecas e brindes.
+*   [ ] Painel administrativo para gestão dinâmica de estoque.
+*   [ ] Sistema de busca avançada com filtros inteligentes.
+
+---
+*Feito com carinho para transformar momentos em memórias.* ✨
