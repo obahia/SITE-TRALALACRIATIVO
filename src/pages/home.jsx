@@ -13,31 +13,9 @@ const Home = () => {
   const containerClass = "container mx-auto px-8 md:px-16 lg:px-32";
 
   // 1. ESTADO PARA GUARDAR OS PRODUTOS QUE VÊM DO BANCO
-  const [products, setProducts] = useState([]);
+  const [products] = useState([]);
 
-  // 2. BUSCAR DADOS NO SUPABASE
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        // Seleciona todos os produtos da tabela 'products'
-        // Se a sua tabela se chamar 'produtos', altere abaixo para .from('produtos')
-        const { data, error } = await supabase
-          .from('products')
-          .select('*');
 
-        if (error) throw error;
-
-        if (data) {
-          console.log("PRODUTO 1:", data[0]);
-          setProducts(data);
-        }
-      } catch (error) {
-        console.error('Erro ao buscar produtos:', error.message);
-      }
-    };
-
-    fetchProducts();
-  }, []);
 
   // Função Scroll
   const scroll = (direction) => {
