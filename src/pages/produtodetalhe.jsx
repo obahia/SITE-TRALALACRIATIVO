@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase'; // Importe o supabase
@@ -192,8 +192,8 @@ const ProdutoDetalhe = () => {
                             <div
                                 onClick={isImageRequired ? triggerFileInput : undefined}
                                 className={`relative h-32 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center transition-all overflow-hidden group ${!isImageRequired ? 'bg-gray-100 border-gray-200 cursor-not-allowed' :
-                                        uploadedImage ? 'border-brand-blue bg-blue-50/20 cursor-pointer' :
-                                            'border-gray-200 hover:border-brand-blue hover:bg-gray-50 cursor-pointer'
+                                    uploadedImage ? 'border-brand-blue bg-blue-50/20 cursor-pointer' :
+                                        'border-gray-200 hover:border-brand-blue hover:bg-gray-50 cursor-pointer'
                                     }`}
                             >
                                 {uploadedImage && isImageRequired ? (
