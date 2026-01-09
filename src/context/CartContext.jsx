@@ -211,9 +211,11 @@ export const CartProvider = ({ children }) => {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   // 6. INICIAR CHECKOUT COM STRIPE
+  const { setIsLoginModalOpen } = useAuth();
+
   const startStripeCheckout = async () => {
     if (!user) {
-      alert('Por favor, faça login para finalizar a compra 🛍️');
+      setIsLoginModalOpen(true);
       return;
     }
 

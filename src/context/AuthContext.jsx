@@ -6,6 +6,7 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   useEffect(() => {
     // Verifica sessão atual
@@ -71,7 +72,9 @@ export const AuthProvider = ({ children }) => {
       signUp,
       signInWithGoogle, // <--- ADICIONA ISTO AQUI
       logout,
-      loading
+      loading,
+      isLoginModalOpen,
+      setIsLoginModalOpen
     }}>
       {!loading && children}
     </AuthContext.Provider>
