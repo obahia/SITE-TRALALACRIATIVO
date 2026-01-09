@@ -16,6 +16,7 @@ const ProdutoDetalhe = () => {
 
     // Estados do formulário
     const [quantity, setQuantity] = useState(1);
+    const [selectedOption, setSelectedOption] = useState(null);
     const [uploadedImage, setUploadedImage] = useState(null);
     const [instructions, setInstructions] = useState('');
     const fileInputRef = useRef(null);
@@ -35,6 +36,10 @@ const ProdutoDetalhe = () => {
                 navigate('/produtos'); // Volta se der erro
             } else {
                 setProduct(data);
+                // Define a primeira opção como padrão se existir
+                if (data.customization_options && data.customization_options.length > 0) {
+                    setSelectedOption(data.customization_options[0]);
+                }
             }
             setLoading(false);
         };
@@ -58,12 +63,23 @@ const ProdutoDetalhe = () => {
 
     const handleAddToCart = () => {
         if (!product) return;
+
+        // Usamos o preço da opção selecionada ou o preço base
+        const finalPrice = selectedOption ? selectedOption.price : product.price;
+
         addToCart(
-            product, // Passa o objeto completo do banco (que já tem o image_url do Storage)
+            { ...product, price: finalPrice },
             quantity,
-            { uploadedImage, instructions }
+            {
+                uploadedImage,
+                instructions,
+                personalizationType: selectedOption?.label || 'Padrão'
+            }
         );
     };
+
+    // Preço unitário atual
+    const currentUnitPrice = selectedOption ? selectedOption.price : (product?.price || 0);
 
     // Tela de Carregamento enquanto busca no banco
     if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-brand-blue" size={40} /></div>;
@@ -78,11 +94,11 @@ const ProdutoDetalhe = () => {
 
             <div className="flex flex-col lg:flex-row gap-12 lg:gap-20">
 
-                {/* LADO ESQUERDO: IMAGEM (Vinda do Storage) */}
+                {/* LADO ESQUERDO: IMAGEM */}
                 <div className="flex-1">
                     <div className="bg-white rounded-[2.5rem] shadow-xl border border-gray-100 overflow-hidden relative group h-[500px] lg:h-[600px] sticky top-8">
                         <img
-                            src={product.image_url}  // <--- AQUI ESTÁ A MÁGICA
+                            src={product.image_url}
                             alt={product.name}
                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                         />
@@ -99,7 +115,7 @@ const ProdutoDetalhe = () => {
                         <h1 className="text-4xl md:text-5xl font-black text-gray-900 mb-4 tracking-tight">{product.name}</h1>
                         <p className="text-gray-600 text-lg leading-relaxed mb-4">{product.description}</p>
                         <div className="text-4xl font-bold text-brand-blue">
-                            {(product.price * quantity).toFixed(2).replace('.', ',')} €
+                            {(currentUnitPrice * quantity).toFixed(2).replace('.', ',')} €
                         </div>
                     </div>
 
@@ -120,6 +136,40 @@ const ProdutoDetalhe = () => {
                             </div>
                         </div>
 
+                        {/* OPÇÕES DE PERSONALIZAÇÃO */}
+                        {product.customization_options && product.customization_options.length > 1 && (
+                            <div className="mb-8">
+                                <label className="text-sm font-bold text-gray-700 mb-4 block uppercase tracking-wider">
+                                    Escolha o Tipo de Personalização
+                                </label>
+                                <div className="grid grid-cols-1 gap-3">
+                                    {product.customization_options.map((option, index) => (
+                                        <button
+                                            key={index}
+                                            onClick={() => setSelectedOption(option)}
+                                            className={`flex justify-between items-center p-4 rounded-2xl border-2 transition-all duration-300 text-left cursor-pointer ${selectedOption?.label === option.label
+                                                    ? 'border-brand-blue bg-blue-50/50 shadow-md ring-4 ring-blue-50/20'
+                                                    : 'border-gray-100 hover:border-gray-200 bg-white'
+                                                }`}
+                                        >
+                                            <div className="flex flex-col">
+                                                <span className={`font-bold ${selectedOption?.label === option.label ? 'text-brand-blue' : 'text-gray-700'}`}>
+                                                    {option.label}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className="font-bold text-gray-900">{option.price.toFixed(2).replace('.', ',')}€</span>
+                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${selectedOption?.label === option.label ? 'bg-brand-blue border-brand-blue' : 'border-gray-300'
+                                                    }`}>
+                                                    {selectedOption?.label === option.label && <Check size={12} className="text-white" />}
+                                                </div>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Upload e Texto */}
                         <div className="mb-8">
                             <label className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
@@ -138,18 +188,35 @@ const ProdutoDetalhe = () => {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="flex flex-col items-center"><Upload size={24} className="text-gray-400 group-hover:text-brand-blue mb-2 transition-colors" /><span className="text-gray-500 font-medium text-sm group-hover:text-brand-blue transition-colors">Clique para carregar imagem</span></div>
+                                    <div className="flex flex-col items-center">
+                                        <Upload size={24} className="text-gray-400 group-hover:text-brand-blue mb-2 transition-colors" />
+                                        <span className="text-gray-500 font-medium text-sm group-hover:text-brand-blue transition-colors">Clique para carregar imagem</span>
+                                    </div>
                                 )}
                             </div>
                         </div>
+
                         <div className="w-full h-px bg-gray-100 mb-8"></div>
+
                         <div>
-                            <label className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2"><MessageSquare size={16} className="text-gray-400" /><span>Instruções Especiais</span></label>
-                            <textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} placeholder="Ex: Nome, frase, cor..." className="w-full h-28 p-4 bg-gray-50 border border-gray-200 rounded-2xl text-gray-700 placeholder-gray-400 focus:outline-none focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-blue-50/50 transition-all resize-none text-sm leading-relaxed" />
+                            <label className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                                <MessageSquare size={16} className="text-gray-400" />
+                                <span>Instruções Especiais</span>
+                            </label>
+                            <textarea
+                                value={instructions}
+                                onChange={(e) => setInstructions(e.target.value)}
+                                placeholder="Ex: Nome, frase, cor..."
+                                className="w-full h-28 p-4 bg-gray-50 border border-gray-200 rounded-2xl text-gray-700 placeholder-gray-400 focus:outline-none focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-blue-50/50 transition-all resize-none text-sm leading-relaxed"
+                            />
                         </div>
                     </div>
 
-                    <button type="button" onClick={handleAddToCart} className="w-full bg-gray-900 text-white text-lg font-bold py-5 rounded-2xl shadow-xl hover:bg-black hover:scale-[1.01] transition-all active:scale-95 cursor-pointer">
+                    <button
+                        type="button"
+                        onClick={handleAddToCart}
+                        className="w-full bg-gray-900 text-white text-lg font-bold py-5 rounded-2xl shadow-xl hover:bg-black hover:scale-[1.01] transition-all active:scale-95 cursor-pointer"
+                    >
                         Adicionar ao Carrinho
                     </button>
                 </div>

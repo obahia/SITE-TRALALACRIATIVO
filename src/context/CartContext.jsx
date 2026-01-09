@@ -33,7 +33,7 @@ export const CartProvider = ({ children }) => {
             cartId: item.id,
             id: item.product.id,
             name: item.product.name,
-            price: item.product.price,
+            price: item.price || item.product.price, // Usa o preço salvo no carrinho
             image: item.product.image_url || item.product.image || '',
             quantity: item.quantity,
             customization: item.customization
@@ -52,7 +52,8 @@ export const CartProvider = ({ children }) => {
                 user_id: user.id,
                 product_id: item.id,
                 quantity: item.quantity,
-                customization: item.customization
+                customization: item.customization,
+                price: item.price // Migra o preço dinâmico
               });
             }
             // Limpar localStorage após migração
@@ -67,7 +68,7 @@ export const CartProvider = ({ children }) => {
                 cartId: item.id,
                 id: item.product.id,
                 name: item.product.name,
-                price: item.product.price,
+                price: item.price || item.product.price,
                 image: item.product.image_url || item.product.image || '',
                 quantity: item.quantity,
                 customization: item.customization
@@ -144,7 +145,8 @@ export const CartProvider = ({ children }) => {
         user_id: user.id,
         product_id: product.id,
         quantity: quantity,
-        customization: customization
+        customization: customization,
+        price: product.price // Salva o preço dinâmico escolhido
       }).select().single();
 
       if (data) {

@@ -73,8 +73,13 @@ const CartSidebar = () => {
                         </div>
 
                         {/* Personalização */}
-                        {(item.customization?.uploadedImage || item.customization?.instructions) && (
+                        {(item.customization?.uploadedImage || item.customization?.instructions || item.customization?.personalizationType) && (
                           <div className="mt-2 space-y-1">
+                            {item.customization.personalizationType && (
+                              <div className="text-[10px] font-bold text-brand-blue uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded w-fit capitalize">
+                                {item.customization.personalizationType}
+                              </div>
+                            )}
                             {item.customization.uploadedImage && (
                               <div className="flex items-center gap-1.5 text-[10px] text-green-600 font-bold bg-green-50 px-2 py-1 rounded w-fit">
                                 <ImageIcon size={10} /> <span>Imagem Anexada</span>
