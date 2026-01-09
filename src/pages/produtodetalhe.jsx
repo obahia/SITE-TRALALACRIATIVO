@@ -81,6 +81,17 @@ const ProdutoDetalhe = () => {
     // Preço unitário atual
     const currentUnitPrice = selectedOption ? selectedOption.price : (product?.price || 0);
 
+    // Lógica para verificar se a opção exige/permite imagem
+    const isImageRequired = useMemo(() => {
+        if (!selectedOption) return false;
+        const label = selectedOption.label.toLowerCase();
+        return label.includes('foto') ||
+            label.includes('arte') ||
+            label.includes('ilustração') ||
+            label.includes('desenho') ||
+            label.includes('colagem');
+    }, [selectedOption]);
+
     // Tela de Carregamento enquanto busca no banco
     if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-brand-blue" size={40} /></div>;
 
@@ -148,8 +159,8 @@ const ProdutoDetalhe = () => {
                                             key={index}
                                             onClick={() => setSelectedOption(option)}
                                             className={`flex justify-between items-center p-4 rounded-2xl border-2 transition-all duration-300 text-left cursor-pointer ${selectedOption?.label === option.label
-                                                    ? 'border-brand-blue bg-blue-50/50 shadow-md ring-4 ring-blue-50/20'
-                                                    : 'border-gray-100 hover:border-gray-200 bg-white'
+                                                ? 'border-brand-blue bg-blue-50/50 shadow-md ring-4 ring-blue-50/20'
+                                                : 'border-gray-100 hover:border-gray-200 bg-white'
                                                 }`}
                                         >
                                             <div className="flex flex-col">
@@ -157,11 +168,11 @@ const ProdutoDetalhe = () => {
                                                     {option.label}
                                                 </span>
                                             </div>
-                                            <div className="flex items-center gap-3">
-                                                <span className="font-bold text-gray-900">{option.price.toFixed(2).replace('.', ',')}€</span>
-                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${selectedOption?.label === option.label ? 'bg-brand-blue border-brand-blue' : 'border-gray-300'
+                                            <div className="flex items-center gap-5 ml-4 shrink-0">
+                                                <span className="font-bold text-gray-900 whitespace-nowrap">{option.price.toFixed(2).replace('.', ',')}€</span>
+                                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${selectedOption?.label === option.label ? 'bg-brand-blue border-brand-blue' : 'border-gray-300'
                                                     }`}>
-                                                    {selectedOption?.label === option.label && <Check size={12} className="text-white" />}
+                                                    {selectedOption?.label === option.label && <Check size={14} className="text-white" />}
                                                 </div>
                                             </div>
                                         </button>
@@ -171,15 +182,21 @@ const ProdutoDetalhe = () => {
                         )}
 
                         {/* Upload e Texto */}
-                        <div className="mb-8">
+                        <div className={`mb-8 transition-all duration-300 ${!isImageRequired ? 'opacity-50 grayscale' : 'opacity-100'}`}>
                             <label className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
                                 <ImageIcon size={16} className="text-gray-400" />
-                                <span>Envie sua arte (Opcional)</span>
-                                {uploadedImage && <span className="ml-auto text-green-600 text-xs bg-green-50 px-2 py-1 rounded-md flex items-center gap-1"><Check size={12} /> Anexado</span>}
+                                <span>{isImageRequired ? 'Envie sua arte (Opcional)' : 'Imagem não disponível para esta opção'}</span>
+                                {uploadedImage && isImageRequired && <span className="ml-auto text-green-600 text-xs bg-green-50 px-2 py-1 rounded-md flex items-center gap-1"><Check size={12} /> Anexado</span>}
                             </label>
                             <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
-                            <div onClick={triggerFileInput} className={`relative h-32 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden group ${uploadedImage ? 'border-brand-blue bg-blue-50/20' : 'border-gray-200 hover:border-brand-blue hover:bg-gray-50'}`}>
-                                {uploadedImage ? (
+                            <div
+                                onClick={isImageRequired ? triggerFileInput : undefined}
+                                className={`relative h-32 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center transition-all overflow-hidden group ${!isImageRequired ? 'bg-gray-100 border-gray-200 cursor-not-allowed' :
+                                        uploadedImage ? 'border-brand-blue bg-blue-50/20 cursor-pointer' :
+                                            'border-gray-200 hover:border-brand-blue hover:bg-gray-50 cursor-pointer'
+                                    }`}
+                            >
+                                {uploadedImage && isImageRequired ? (
                                     <div className="flex items-center gap-4 p-4 w-full h-full">
                                         <div className="h-full aspect-square rounded-xl overflow-hidden border border-gray-200 bg-white shadow-sm"><img src={uploadedImage} alt="Upload" className="w-full h-full object-cover" /></div>
                                         <div className="flex-1">
@@ -188,9 +205,11 @@ const ProdutoDetalhe = () => {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="flex flex-col items-center">
+                                    <div className="flex flex-col items-center p-4 text-center">
                                         <Upload size={24} className="text-gray-400 group-hover:text-brand-blue mb-2 transition-colors" />
-                                        <span className="text-gray-500 font-medium text-sm group-hover:text-brand-blue transition-colors">Clique para carregar imagem</span>
+                                        <span className="text-gray-500 font-medium text-sm group-hover:text-brand-blue transition-colors px-4">
+                                            {isImageRequired ? 'Clique para carregar imagem' : 'Esta opção utiliza apenas texto'}
+                                        </span>
                                     </div>
                                 )}
                             </div>
