@@ -62,6 +62,19 @@ const Header = () => {
             <Link to="/produtos" className={navLinkStyle}>Produtos</Link>
             <Link to="/sobre" className={navLinkStyle}>Sobre Nós</Link>
 
+            {/* Botão Carrinho */}
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="relative p-2 hover:bg-gray-100 rounded-full transition cursor-pointer ml-1 text-brand-dark group"
+            >
+              <ShoppingCart className="w-6 h-6 group-hover:text-[#e8b65a] transition-colors" />
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-brand-pink text-xs font-bold text-white flex items-center justify-center animate-bounce shadow-sm">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+
             {/* --- ÁREA DO USUÁRIO --- */}
             {user ? (
               // SE ESTIVER LOGADO
@@ -91,18 +104,7 @@ const Header = () => {
               </button>
             )}
 
-            {/* Botão Carrinho */}
-            <button
-              onClick={() => setIsCartOpen(true)}
-              className="relative p-2 hover:bg-gray-100 rounded-full transition cursor-pointer ml-1 text-brand-dark group"
-            >
-              <ShoppingCart className="w-6 h-6 group-hover:text-[#e8b65a] transition-colors" />
-              {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-brand-pink text-xs font-bold text-white flex items-center justify-center animate-bounce shadow-sm">
-                  {cartCount}
-                </span>
-              )}
-            </button>
+
           </nav>
 
           {/* MENU MOBILE */}
