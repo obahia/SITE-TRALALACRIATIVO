@@ -163,14 +163,16 @@ const ProdutoDetalhe = () => {
                                                 : 'border-gray-100 hover:border-gray-200 bg-white'
                                                 }`}
                                         >
-                                            <div className="flex flex-col">
-                                                <span className={`font-bold ${selectedOption?.label === option.label ? 'text-brand-blue' : 'text-gray-700'}`}>
+                                            <div className="flex-1 pr-4">
+                                                <span className={`font-bold transition-colors ${selectedOption?.label === option.label ? 'text-brand-blue' : 'text-gray-700'}`}>
                                                     {option.label}
                                                 </span>
                                             </div>
-                                            <div className="flex items-center gap-5 ml-4 shrink-0">
-                                                <span className="font-bold text-gray-900 whitespace-nowrap">{option.price.toFixed(2).replace('.', ',')}€</span>
-                                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${selectedOption?.label === option.label ? 'bg-brand-blue border-brand-blue' : 'border-gray-300'
+                                            <div className="flex items-center gap-4 shrink-0">
+                                                <span className="font-bold text-gray-900">{option.price.toFixed(2).replace('.', ',')}€</span>
+                                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedOption?.label === option.label
+                                                        ? 'bg-brand-blue border-brand-blue shadow-sm'
+                                                        : 'border-gray-300'
                                                     }`}>
                                                     {selectedOption?.label === option.label && <Check size={14} className="text-white" />}
                                                 </div>

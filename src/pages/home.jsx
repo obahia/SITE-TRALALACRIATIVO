@@ -13,9 +13,28 @@ const Home = () => {
   const containerClass = "container mx-auto px-8 md:px-16 lg:px-32";
 
   // 1. ESTADO PARA GUARDAR OS PRODUTOS QUE VÊM DO BANCO
-  const [products] = useState([]);
+  const [products, setProducts] = useState([]);
 
+  // 2. BUSCAR DADOS NO SUPABASE
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*');
 
+        if (error) throw error;
+
+        if (data) {
+          setProducts(data);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar produtos:', error.message);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   // Função Scroll
   const scroll = (direction) => {
