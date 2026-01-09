@@ -178,7 +178,7 @@ const Home = () => {
 
 // Componente FeatureCard 
 const FeatureCard = ({ icon, color, title, desc }) => (
-  <div className="text-center p-8 rounded-[2rem] bg-white/60 backdrop-blur-md shadow-sm border border-white/50 hover:shadow-lg hover:-translate-y-2 transition-all duration-300 h-full flex flex-col items-center group">
+  <div className="text-center p-8 rounded-[2rem] bg-white shadow-sm hover:shadow-lg hover:-translate-y-2 transition-all duration-300 h-full flex flex-col items-center group">
     <div className={`${color} mb-6 group-hover:scale-110 transition-transform duration-500`}>
       {icon}
     </div>

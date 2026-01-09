@@ -8,12 +8,12 @@ const ProductCard = ({ id, title, description, price, image }) => {
     <motion.div
       whileHover={{ y: -8 }}
       transition={{ type: "spring", stiffness: 300 }}
-      className="group relative rounded-2xl bg-white/70 backdrop-blur-sm p-1 h-full flex flex-col"
+      className="group relative rounded-2xl bg-white p-1 h-full flex flex-col"
     >
       {/* Borda Gradiente */}
       <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-brand-blue via-brand-purple to-brand-pink opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10 blur-[2px]"></div>
 
-      <div className="relative h-full bg-white/80 backdrop-blur-md rounded-xl p-6 flex flex-col items-center text-center shadow-sm group-hover:shadow-card-hover transition-shadow duration-300">
+      <div className="relative h-full bg-white rounded-xl p-6 flex flex-col items-center text-center shadow-sm group-hover:shadow-card-hover transition-shadow duration-300">
 
         {/* --- 1. ÁREA DA IMAGEM (Quadrado Perfeito) --- */}
         {/* MUDANÇA AQUI: Troquei 'h-48' por 'aspect-square'. 

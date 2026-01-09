@@ -81,15 +81,9 @@ const ProdutoDetalhe = () => {
     // Preço unitário atual
     const currentUnitPrice = selectedOption ? selectedOption.price : (product?.price || 0);
 
-    // Lógica para verificar se a opção exige/permite imagem
+    // Lógica para verificar se a opção exige/permite imagem (Vindo do Banco)
     const isImageRequired = useMemo(() => {
-        if (!selectedOption) return false;
-        const label = selectedOption.label.toLowerCase();
-        return label.includes('foto') ||
-            label.includes('arte') ||
-            label.includes('ilustração') ||
-            label.includes('desenho') ||
-            label.includes('colagem');
+        return selectedOption?.allows_image === true;
     }, [selectedOption]);
 
     // Tela de Carregamento enquanto busca no banco
@@ -171,8 +165,8 @@ const ProdutoDetalhe = () => {
                                             <div className="flex items-center gap-4 shrink-0">
                                                 <span className="font-bold text-gray-900">{option.price.toFixed(2).replace('.', ',')}€</span>
                                                 <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedOption?.label === option.label
-                                                        ? 'bg-brand-blue border-brand-blue shadow-sm'
-                                                        : 'border-gray-300'
+                                                    ? 'bg-brand-blue border-brand-blue shadow-sm'
+                                                    : 'border-gray-300'
                                                     }`}>
                                                     {selectedOption?.label === option.label && <Check size={14} className="text-white" />}
                                                 </div>
