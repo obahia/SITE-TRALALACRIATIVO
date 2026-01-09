@@ -6,36 +6,51 @@
 @theme {
   /* --- CORES --- */
   /* Ajustei para um bege mais visível e aconchegante */
-  --color-brand-light: #fcfaf4; 
-  
+  --color-brand-light: #f8f5ee;
+  /* Um bege/creme mais perceptível e elegante */
   --color-brand-blue: #0ea5e9;
   --color-brand-dark: #0284c7;
   --color-brand-pink: #ec4899;
   --color-brand-purple: #a855f7;
-  --color-brand-yellow: #f7b731; /* Adicionei o amarelo caso precise */
+  --color-brand-yellow: #f7b731;
+  /* Adicionei o amarelo caso precise */
 
   /* --- FONTES --- */
-  --font-sans: "Fredoka", sans-serif; 
-  
+  --font-sans: "Fredoka", sans-serif;
+
   /* --- ANIMAÇÕES --- */
   --animate-float: float 6s ease-in-out infinite;
 
   @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-20px); }
+
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+
+    50% {
+      transform: translateY(-20px);
+    }
   }
 }
 
 /* --- 2. APLICANDO O FUNDO (O que faltava) --- */
 body {
-  background-color: var(--color-brand-light); /* Aplica o bege */
-  color: #334155; /* Texto cinza escuro (slate-700) para leitura confortável */
+  background-color: var(--color-brand-light);
+  /* Aplica o bege */
+  color: #334155;
+  /* Texto cinza escuro (slate-700) para leitura confortável */
 }
 
 /* Animação Wave (se ainda for usar em algum lugar) */
 @keyframes textWave {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 200% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+
+  100% {
+    background-position: 200% 50%;
+  }
 }
 
 .text-wave-effect {

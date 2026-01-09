@@ -45,7 +45,7 @@ const Header = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b border-white/50 bg-white/80 backdrop-blur-md shadow-sm h-24 flex items-center transition-all">
+      <header className="sticky top-0 z-50 w-full bg-white/50 backdrop-blur-xl border-b border-white/20 h-24 flex items-center transition-all">
         <div className={`${containerClass} w-full flex items-center justify-between`}>
 
           <Link to="/" className="flex items-center gap-4 hover:scale-105 transition-transform duration-300 group">
