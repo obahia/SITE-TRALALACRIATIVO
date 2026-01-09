@@ -1,5 +1,5 @@
 // src/context/CartContext.jsx
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../services/supabase';
 import { useAuth } from './AuthContext';
 
@@ -198,6 +198,15 @@ export const CartProvider = ({ children }) => {
       localStorage.removeItem(CART_STORAGE_KEY);
     }
   }, [user]);
+
+  // 5.5 CÁLCULOS DO CARRINHO
+  const cartTotal = useMemo(() => {
+    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  }, [cartItems]);
+
+  const cartCount = useMemo(() => {
+    return cartItems.reduce((count, item) => count + item.quantity, 0);
+  }, [cartItems]);
 
   const [checkoutLoading, setCheckoutLoading] = useState(false);
 
