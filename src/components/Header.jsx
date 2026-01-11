@@ -79,13 +79,13 @@ const Header = () => {
             {user ? (
               // SE ESTIVER LOGADO
               <div className="flex items-center gap-2 ml-4 pl-4 border-l border-gray-200">
-                <div className="flex items-center gap-2 text-sm font-bold text-brand-blue">
+                <Link to="/perfil" className="flex items-center gap-2 text-sm font-bold text-brand-blue hover:text-brand-pink transition-colors">
                   <User size={18} />
                   {/* AQUI MOSTRAMOS O NOME VINDO DO BANCO */}
                   <span className="max-w-[120px] truncate capitalize">
                     {nomeExibicao || 'Carregando...'}
                   </span>
-                </div>
+                </Link>
                 <button
                   onClick={logout}
                   title="Sair"
@@ -126,11 +126,11 @@ const Header = () => {
             {/* Opção de Login Mobile */}
             {user ? (
               <div className="flex justify-between items-center bg-blue-50 p-3 rounded-lg mb-2">
-                <span className="font-bold text-brand-blue text-sm flex items-center gap-2">
+                <Link to="/perfil" onClick={() => setIsMenuOpen(false)} className="font-bold text-brand-blue text-sm flex items-center gap-2 hover:text-brand-pink transition-colors">
                   <User size={16} />
                   {/* Nome no mobile também atualizado */}
                   {nomeExibicao || user.email}
-                </span>
+                </Link>
                 <button onClick={logout} className="text-xs text-red-500 font-bold border border-red-200 px-2 py-1 rounded bg-white">Sair</button>
               </div>
             ) : (
