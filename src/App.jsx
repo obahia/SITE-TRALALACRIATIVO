@@ -15,6 +15,8 @@ import ProdutoDetalhe from './pages/produtodetalhe';
 
 import Sucesso from './pages/sucesso';
 import Cancelado from './pages/cancelado';
+import Profile from './pages/Profile';
+import ProtectedRoute from './components/ProtectedRoute';
 
 const AnimatedRoutes = () => {
   const location = useLocation();
@@ -28,6 +30,16 @@ const AnimatedRoutes = () => {
         <Route path="/produto/:id" element={<ProdutoDetalhe />} />
         <Route path="/sucesso" element={<Sucesso />} />
         <Route path="/cancelado" element={<Cancelado />} />
+
+        {/* Rota Protegida de Exemplo */}
+        <Route
+          path="/perfil"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </AnimatePresence>
   );
