@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase'; // Importe o supabase
 import { useCart } from '../context/CartContext';
-import { Minus, Plus, Upload, ArrowLeft, X, Check, ShieldCheck, MessageSquare, Edit3, ImageIcon, Loader2 } from 'lucide-react';
+import { Minus, Plus, Upload, ArrowLeft, X, Check, ShieldCheck, MessageSquare, Edit3, ImageIcon, Loader2, Package } from 'lucide-react';
 
 const ProdutoDetalhe = () => {
     const { id } = useParams(); // Pega o ID da URL (ex: /produto/1)
@@ -36,8 +36,8 @@ const ProdutoDetalhe = () => {
                 navigate('/produtos'); // Volta se der erro
             } else {
                 setProduct(data);
-                // Define a primeira opção como padrão se existir
-                if (data.customization_options && data.customization_options.length > 0) {
+                // Define a primeira opção como padrão se existir e for um array
+                if (Array.isArray(data.customization_options) && data.customization_options.length > 0) {
                     setSelectedOption(data.customization_options[0]);
                 }
             }
@@ -102,11 +102,17 @@ const ProdutoDetalhe = () => {
                 {/* LADO ESQUERDO: IMAGEM */}
                 <div className="flex-1">
                     <div className="bg-white rounded-[2.5rem] shadow-xl border border-gray-100 overflow-hidden relative group h-[500px] lg:h-[600px] sticky top-8">
-                        <img
-                            src={product.image_url}
-                            alt={product.name}
-                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                        />
+                        {product.image_url ? (
+                            <img
+                                src={product.image_url}
+                                alt={product.name}
+                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                                <Package size={64} className="text-gray-400" />
+                            </div>
+                        )}
                         <div className="absolute top-6 left-6 bg-white/90 backdrop-blur px-4 py-2 rounded-full text-xs font-bold text-gray-800 shadow-sm border border-gray-100 flex items-center gap-2">
                             <ShieldCheck size={14} className="text-green-500" />
                             <span>Qualidade Premium</span>
