@@ -1,15 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  ShoppingBag, 
-  Package, 
-  Users, 
-  Euro,
-  TrendingUp,
-  ArrowRight,
-  Loader2
-} from 'lucide-react';
+import { ShoppingBag, Package, Users, Euro, ArrowRight } from 'lucide-react';
 import { supabase } from '../../services/supabase';
+import { StatCard, LoadingSpinner } from '../../components/ui';
+import { formatCurrency, formatDate } from '../../utils/formatters';
+import { ORDER_STATUS_COLORS, DEFAULT_STATUS_COLOR } from '../../constants';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -71,36 +66,14 @@ const AdminDashboard = () => {
     fetchStats();
   }, []);
 
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('pt-PT', {
-      style: 'currency',
-      currency: 'EUR',
-    }).format(value || 0);
-  };
-
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('pt-PT', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-  };
-
   const getStatusColor = (status) => {
-    const colors = {
-      pendente: 'bg-yellow-100 text-yellow-800',
-      pago: 'bg-green-100 text-green-800',
-      enviado: 'bg-blue-100 text-blue-800',
-      entregue: 'bg-gray-100 text-gray-800',
-      cancelado: 'bg-red-100 text-red-800',
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+    return ORDER_STATUS_COLORS[status] || DEFAULT_STATUS_COLOR;
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="animate-spin text-brand-blue" size={32} />
+        <LoadingSpinner size={32} />
       </div>
     );
   }
@@ -194,19 +167,5 @@ const AdminDashboard = () => {
     </div>
   );
 };
-
-const StatCard = ({ icon: Icon, label, value, color }) => (
-  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm text-gray-500 mb-1">{label}</p>
-        <p className="text-2xl font-bold text-gray-800">{value}</p>
-      </div>
-      <div className={`${color} p-3 rounded-xl`}>
-        <Icon className="text-white" size={24} />
-      </div>
-    </div>
-  </div>
-);
 
 export default AdminDashboard;

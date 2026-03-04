@@ -1,40 +1,15 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef } from 'react';
 import { ShoppingBag, Palette, Heart, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
-// IMPORTANTE: Verifique se o caminho do seu arquivo supabaseClient está correto
-import { supabase } from '../services/supabase';
-
 import ProductCard from '../components/ProductCard';
+import { useProducts } from '../hooks/useProducts';
+import { CONTAINER_CLASS } from '../constants';
 
 const Home = () => {
   const scrollRef = useRef(null);
-  const containerClass = "container mx-auto px-8 md:px-16 lg:px-32";
-
-  // 1. ESTADO PARA GUARDAR OS PRODUTOS QUE VÊM DO BANCO
-  const [products, setProducts] = useState([]);
-
-  // 2. BUSCAR DADOS NO SUPABASE
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('products')
-          .select('*');
-
-        if (error) throw error;
-
-        if (data) {
-          setProducts(data);
-        }
-      } catch (error) {
-        console.error('Erro ao buscar produtos:', error.message);
-      }
-    };
-
-    fetchProducts();
-  }, []);
+  const { products, loading } = useProducts();
 
   // Função Scroll
   const scroll = (direction) => {
@@ -56,7 +31,7 @@ const Home = () => {
       className="antialiased min-h-screen pb-10"
     >
       {/* --- HERO SECTION --- */}
-      <section className={`${containerClass} py-12 md:py-20 lg:py-24`}>
+      <section className={`${CONTAINER_CLASS} py-12 md:py-20 lg:py-24`}>
         <div className="flex flex-col lg:flex-row items-center gap-12">
 
           {/* Texto */}
@@ -99,7 +74,7 @@ const Home = () => {
       </section>
 
       {/* --- FEATURES (Estilo Vidro) --- */}
-      <section className={`${containerClass} py-8`}>
+      <section className={`${CONTAINER_CLASS} py-8`}>
         <div className="grid md:grid-cols-3 gap-8">
           <FeatureCard icon={<ShoppingBag size={48} />} color="text-brand-blue" title="Produtos Diversos" desc="Canecas, camisetas, azulejos e muito mais para você personalizar" />
           <FeatureCard icon={<Palette size={48} />} color="text-brand-pink" title="100% Personalizável" desc="Adicione textos, imagens e detalhes únicos em cada produto" />
@@ -111,7 +86,7 @@ const Home = () => {
       <section id="destaques" className="py-16 my-12 relative">
         <div className="absolute inset-0 bg-brand-blue/5 -skew-y-2 transform origin-left -z-10"></div>
 
-        <div className={containerClass}>
+        <div className={CONTAINER_CLASS}>
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="text-3xl font-bold text-brand-dark">Destaques</h2>
@@ -136,7 +111,8 @@ const Home = () => {
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {/* Mensagem se não houver produtos */}
-            {products.length === 0 && <p className="text-gray-400 pl-4">A carregar produtos...</p>}
+            {loading && <p className="text-gray-400 pl-4">A carregar produtos...</p>}
+            {!loading && products.length === 0 && <p className="text-gray-400 pl-4">Nenhum produto disponível</p>}
 
             {products.map((product) => (
               <div key={product.id} className="min-w-[300px] snap-center">
@@ -155,7 +131,7 @@ const Home = () => {
       </section>
 
       {/* --- CTA --- */}
-      <section className={`${containerClass} py-12 pb-24`}>
+      <section className={`${CONTAINER_CLASS} py-12 pb-24`}>
         <div className="relative overflow-hidden bg-gradient-to-br from-brand-blue/10 to-brand-pink/10 rounded-[3rem] p-12 text-center border border-white/50 backdrop-blur-sm shadow-xl">
           <div className="absolute top-0 left-0 w-64 h-64 bg-brand-blue/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
           <div className="absolute bottom-0 right-0 w-64 h-64 bg-brand-pink/20 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>

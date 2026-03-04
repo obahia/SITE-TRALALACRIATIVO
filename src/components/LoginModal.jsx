@@ -72,19 +72,17 @@ const LoginModal = ({ isOpen, onClose }) => {
 
   return (
     <>
-      {/* Overlay - sem animação, aparece instantaneamente */}
+      {/* Overlay */}
       <div
         onClick={handleClose}
-        className="fixed inset-0 bg-black/80 z-[60] animate-[fadeIn_0.1s_ease-out]"
-        style={{ animationFillMode: 'forwards' }}
+        className="fixed inset-0 bg-black/80 z-[60] animate-fade-in"
       />
 
       {/* Modal */}
       <div
         className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
         w-[95%] max-w-md bg-white rounded-3xl shadow-2xl z-[70] overflow-hidden
-        animate-[fadeIn_0.15s_ease-out]"
-        style={{ animationFillMode: 'forwards' }}
+        animate-fade-in"
       >
         {/* Header com gradiente */}
         <div className="relative bg-gradient-to-r from-brand-blue to-brand-pink p-6 pb-8">
@@ -118,10 +116,10 @@ const LoginModal = ({ isOpen, onClose }) => {
             <button
               type="button"
               onClick={() => { setIsRegistering(false); setError(''); }}
-              className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-colors duration-150 cursor-pointer
+              className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-colors duration-150
                 ${!isRegistering
-                  ? 'bg-white text-brand-blue shadow-md'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-white text-brand-blue shadow-md cursor-default'
+                  : 'text-gray-600 hover:text-gray-900 cursor-pointer'
                 }`}
             >
               ENTRAR
@@ -130,10 +128,10 @@ const LoginModal = ({ isOpen, onClose }) => {
             <button
               type="button"
               onClick={() => { setIsRegistering(true); setError(''); }}
-              className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-colors duration-150 cursor-pointer
+              className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-colors duration-150
                 ${isRegistering
-                  ? 'bg-white text-brand-pink shadow-md'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-white text-brand-pink shadow-md cursor-default'
+                  : 'text-gray-600 hover:text-gray-900 cursor-pointer'
                 }`}
             >
               REGISTAR
@@ -294,14 +292,6 @@ const LoginModal = ({ isOpen, onClose }) => {
           </button>
         </div>
       </div>
-
-      {/* CSS Keyframes */}
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-      `}</style>
     </>
   );
 };

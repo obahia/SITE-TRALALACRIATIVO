@@ -1,53 +1,29 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Link, useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '../services/supabase'; // Importe o supabase
+import { Link, useParams } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useProduct } from '../hooks/useProducts';
 import { Minus, Plus, Upload, ArrowLeft, X, Check, ShieldCheck, MessageSquare, Edit3, ImageIcon, Loader2, Package } from 'lucide-react';
+import { formatPriceSimple } from '../utils/formatters';
+import { CONTAINER_CLASS } from '../constants';
 
 const ProdutoDetalhe = () => {
-    const { id } = useParams(); // Pega o ID da URL (ex: /produto/1)
-    const navigate = useNavigate();
+    const { id } = useParams();
     const { addToCart } = useCart();
+    const { product, loading: productLoading } = useProduct(id);
 
-    // Estado para guardar o produto que veio do banco
-    const [product, setProduct] = useState(null);
-    const [loading, setLoading] = useState(true);
-
-    // Estados do formulário
     const [quantity, setQuantity] = useState(1);
     const [selectedOption, setSelectedOption] = useState(null);
     const [uploadedImage, setUploadedImage] = useState(null);
     const [instructions, setInstructions] = useState('');
     const fileInputRef = useRef(null);
 
-    // --- 1. BUSCAR PRODUTO NO SUPABASE ---
     useEffect(() => {
-        const fetchProduct = async () => {
-            setLoading(true);
-            const { data, error } = await supabase
-                .from('products')
-                .select('*')
-                .eq('id', id)
-                .single(); // Pega apenas um
+        if (product && Array.isArray(product.customization_options) && product.customization_options.length > 0) {
+            setSelectedOption(product.customization_options[0]);
+        }
+    }, [product]);
 
-            if (error || !data) {
-                console.error("Produto não encontrado", error);
-                navigate('/produtos'); // Volta se der erro
-            } else {
-                setProduct(data);
-                // Define a primeira opção como padrão se existir e for um array
-                if (Array.isArray(data.customization_options) && data.customization_options.length > 0) {
-                    setSelectedOption(data.customization_options[0]);
-                }
-            }
-            setLoading(false);
-        };
-
-        fetchProduct();
-    }, [id, navigate]);
-
-    // Funções de manipulação do formulário (iguais as anteriores)
     const handleImageUpload = (event) => {
         const file = event.target.files[0];
         if (!file) return;
@@ -63,10 +39,7 @@ const ProdutoDetalhe = () => {
 
     const handleAddToCart = () => {
         if (!product) return;
-
-        // Usamos o preço da opção selecionada ou o preço base
         const finalPrice = selectedOption ? selectedOption.price : product.price;
-
         addToCart(
             { ...product, price: finalPrice },
             quantity,
@@ -78,21 +51,18 @@ const ProdutoDetalhe = () => {
         );
     };
 
-    // Preço unitário atual
     const currentUnitPrice = selectedOption ? selectedOption.price : (product?.price || 0);
 
-    // Lógica para verificar se a opção exige/permite imagem (Vindo do Banco)
     const isImageRequired = useMemo(() => {
         return selectedOption?.allows_image === true;
     }, [selectedOption]);
 
-    // Tela de Carregamento enquanto busca no banco
-    if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-brand-blue" size={40} /></div>;
+    if (productLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-brand-blue" size={40} /></div>;
 
     if (!product) return null;
 
     return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="container mx-auto px-4 md:px-16 lg:px-32 py-12">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`${CONTAINER_CLASS} py-12`}>
             <Link to="/produtos" className="inline-flex items-center gap-2 text-gray-500 hover:text-brand-blue mb-8 transition-colors font-medium">
                 <ArrowLeft size={20} /> Voltar para produtos
             </Link>
@@ -126,7 +96,7 @@ const ProdutoDetalhe = () => {
                         <h1 className="text-4xl md:text-5xl font-black text-gray-900 mb-4 tracking-tight">{product.name}</h1>
                         <p className="text-gray-600 text-lg leading-relaxed mb-4">{product.description}</p>
                         <div className="text-4xl font-bold text-brand-blue">
-                            {(currentUnitPrice * quantity).toFixed(2).replace('.', ',')} €
+                            {formatPriceSimple(currentUnitPrice * quantity)}
                         </div>
                     </div>
 
