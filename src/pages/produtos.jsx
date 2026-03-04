@@ -1,37 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import ProductCard from '../components/ProductCard';
 import { motion } from 'framer-motion';
-import { supabase } from '../services/supabase'; // Importe o cliente
+import { useProducts } from '../hooks/useProducts';
 
 const Produtos = () => {
-  // 1. Estados para guardar dados e controlar carregamento
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  // 2. Buscar produtos no Supabase ao carregar a página
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from('products') // Nome da sua tabela
-          .select('*')
-          .order('created_at', { ascending: false }); // Opcional: Mostra os mais novos primeiro
-
-        if (error) throw error;
-
-        if (data) {
-          setProducts(data);
-        }
-      } catch (error) {
-        console.error("Erro ao buscar produtos:", error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, []);
+  const { products, loading } = useProducts();
 
   return (
     <motion.div

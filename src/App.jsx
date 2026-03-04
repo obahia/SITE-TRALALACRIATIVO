@@ -17,6 +17,12 @@ import Sucesso from './pages/sucesso';
 import Cancelado from './pages/cancelado';
 import Profile from './pages/Profile';
 import ProtectedRoute from './components/ProtectedRoute';
+import ProtectedAdminRoute from './components/ProtectedAdminRoute';
+import AdminLayout from './components/AdminLayout';
+import AdminDashboard from './pages/admin/Dashboard';
+import AdminOrders from './pages/admin/Orders';
+import AdminProducts from './pages/admin/Products';
+import AdminUsers from './pages/admin/Users';
 
 const AnimatedRoutes = () => {
   const location = useLocation();
@@ -38,6 +44,48 @@ const AnimatedRoutes = () => {
             <ProtectedRoute>
               <Profile />
             </ProtectedRoute>
+          }
+        />
+
+        {/* Rotas de Admin */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedAdminRoute>
+              <AdminLayout>
+                <AdminDashboard />
+              </AdminLayout>
+            </ProtectedAdminRoute>
+          }
+        />
+        <Route
+          path="/admin/pedidos"
+          element={
+            <ProtectedAdminRoute>
+              <AdminLayout>
+                <AdminOrders />
+              </AdminLayout>
+            </ProtectedAdminRoute>
+          }
+        />
+        <Route
+          path="/admin/produtos"
+          element={
+            <ProtectedAdminRoute>
+              <AdminLayout>
+                <AdminProducts />
+              </AdminLayout>
+            </ProtectedAdminRoute>
+          }
+        />
+        <Route
+          path="/admin/usuarios"
+          element={
+            <ProtectedAdminRoute>
+              <AdminLayout>
+                <AdminUsers />
+              </AdminLayout>
+            </ProtectedAdminRoute>
           }
         />
       </Routes>

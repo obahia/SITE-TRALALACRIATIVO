@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Package } from 'lucide-react';
+import { formatPriceSimple } from '../utils/formatters';
 
 const ProductCard = ({ id, title, description, price, image }) => {
   return (
@@ -53,7 +54,7 @@ const ProductCard = ({ id, title, description, price, image }) => {
         {/* --- 4. RODAPÉ (Preço e Botão) --- */}
         <div className="mt-auto w-full">
           <div className="text-2xl font-bold text-brand-blue mb-4">
-            {typeof price === 'number' ? `${price.toFixed(2)}€` : price}
+            {formatPriceSimple(price)}
           </div>
 
           <Link

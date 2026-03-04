@@ -46,18 +46,38 @@ export const CartProvider = ({ children }) => {
         if (localCart) {
           const localItems = JSON.parse(localCart);
           if (localItems.length > 0) {
-            // Adicionar itens locais ao Supabase
-            for (const item of localItems) {
-              await supabase.from('cart_items').insert({
+            // Verificar itens existentes no Supabase para evitar duplicatas
+            const { data: existingItems } = await supabase
+              .from('cart_items')
+              .select('product_id, customization')
+              .eq('user_id', user.id);
+
+            const existingKeys = new Set(
+              existingItems?.map(item => `${item.product_id}-${JSON.stringify(item.customization || {})}`) || []
+            );
+
+            // Filtrar apenas itens que não existem
+            const newItems = localItems.filter(item => {
+              const key = `${item.id}-${JSON.stringify(item.customization || {})}`;
+              return !existingKeys.has(key);
+            });
+
+            // Bulk insert apenas dos novos itens
+            if (newItems.length > 0) {
+              const itemsToInsert = newItems.map(item => ({
                 user_id: user.id,
                 product_id: item.id,
                 quantity: item.quantity,
                 customization: item.customization,
-                price: item.price // Migra o preço dinâmico
-              });
+                price: item.price
+              }));
+
+              await supabase.from('cart_items').insert(itemsToInsert);
             }
+
             // Limpar localStorage após migração
             localStorage.removeItem(CART_STORAGE_KEY);
+
             // Recarregar carrinho do Supabase
             const { data: updatedData } = await supabase
               .from('cart_items')
@@ -99,66 +119,70 @@ export const CartProvider = ({ children }) => {
   const addToCart = useCallback(async (product, quantity, customization) => {
     setIsCartOpen(true);
 
-    // Verificar se já existe item igual
-    const existingItemIndex = cartItems.findIndex(item =>
-      item.id === product.id &&
-      JSON.stringify(item.customization || {}) === JSON.stringify(customization || {})
-    );
+    // Usar functional update para evitar race condition
+    setCartItems(prev => {
+      // Verificar se já existe item igual
+      const existingItemIndex = prev.findIndex(item =>
+        item.id === product.id &&
+        JSON.stringify(item.customization || {}) === JSON.stringify(customization || {})
+      );
 
-    if (existingItemIndex !== -1) {
-      // Item já existe - atualizar quantidade
-      const existingItem = cartItems[existingItemIndex];
-      const newQuantity = existingItem.quantity + quantity;
+      if (existingItemIndex !== -1) {
+        // Item já existe - atualizar quantidade
+        const existingItem = prev[existingItemIndex];
+        const newQuantity = existingItem.quantity + quantity;
 
-      setCartItems(prev => {
         const updated = prev.map((item, index) =>
           index === existingItemIndex ? { ...item, quantity: newQuantity } : item
         );
+
         if (!user) saveToLocalStorage(updated);
+
+        // Atualizar no Supabase de forma assíncrona (sem bloquear)
+        if (user) {
+          supabase.from('cart_items').update({ quantity: newQuantity }).eq('id', existingItem.cartId).then();
+        }
+
         return updated;
-      });
-
-      if (user) {
-        await supabase.from('cart_items').update({ quantity: newQuantity }).eq('id', existingItem.cartId);
       }
-      return;
-    }
 
-    // Item novo - adicionar
-    const tempId = Date.now();
-    const newItem = {
-      ...product,
-      cartId: tempId,
-      quantity,
-      customization,
-      image: product.image_url || product.image || ''
-    };
+      // Item novo - adicionar
+      const tempId = Date.now();
+      const newItem = {
+        ...product,
+        cartId: tempId,
+        quantity,
+        customization,
+        image: product.image_url || product.image || ''
+      };
 
-    setCartItems(prev => {
       const updated = [...prev, newItem];
+
       if (!user) saveToLocalStorage(updated);
+
+      // Inserir no Supabase de forma assíncrona (sem bloquear)
+      if (user) {
+        supabase.from('cart_items').insert({
+          user_id: user.id,
+          product_id: product.id,
+          quantity: quantity,
+          customization: customization,
+          price: product.price
+        }).select().single().then(({ data }) => {
+          if (data) {
+            setCartItems(current => current.map(item =>
+              item.cartId === tempId ? { ...item, cartId: data.id } : item
+            ));
+          }
+        });
+      }
+
       return updated;
     });
-
-    if (user) {
-      const { data } = await supabase.from('cart_items').insert({
-        user_id: user.id,
-        product_id: product.id,
-        quantity: quantity,
-        customization: customization,
-        price: product.price // Salva o preço dinâmico escolhido
-      }).select().single();
-
-      if (data) {
-        setCartItems(prev => prev.map(item =>
-          item.cartId === tempId ? { ...item, cartId: data.id } : item
-        ));
-      }
-    }
-  }, [cartItems, user]);
+  }, [user]);
 
   // 3. REMOVER DO CARRINHO
-  const removeFromCart = useCallback(async (cartId) => {
+  const removeFromCart = useCallback((cartId) => {
     setCartItems(prev => {
       const filtered = prev.filter(item => item.cartId !== cartId);
       if (!user) saveToLocalStorage(filtered);
@@ -166,30 +190,31 @@ export const CartProvider = ({ children }) => {
     });
 
     if (user) {
-      await supabase.from('cart_items').delete().eq('id', cartId);
+      supabase.from('cart_items').delete().eq('id', cartId).then();
     }
   }, [user]);
 
   // 4. ATUALIZAR QUANTIDADE
-  const updateQuantity = useCallback(async (cartId, amount) => {
-    const item = cartItems.find(i => i.cartId === cartId);
-    if (!item) return;
-
-    const newQuantity = item.quantity + amount;
-    if (newQuantity < 1) return;
-
+  const updateQuantity = useCallback((cartId, amount) => {
     setCartItems(prev => {
+      const item = prev.find(i => i.cartId === cartId);
+      if (!item) return prev;
+
+      const newQuantity = item.quantity + amount;
+      if (newQuantity < 1) return prev;
+
       const updated = prev.map(i =>
         i.cartId === cartId ? { ...i, quantity: newQuantity } : i
       );
       if (!user) saveToLocalStorage(updated);
+
+      if (user) {
+        supabase.from('cart_items').update({ quantity: newQuantity }).eq('id', cartId).then();
+      }
+
       return updated;
     });
-
-    if (user) {
-      await supabase.from('cart_items').update({ quantity: newQuantity }).eq('id', cartId);
-    }
-  }, [cartItems, user]);
+  }, [user]);
 
   // 5. LIMPAR CARRINHO
   const clearCart = useCallback(async () => {

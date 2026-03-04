@@ -1,69 +1,114 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
-import { User, Mail, LogOut } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { User, Mail, LogOut, Package, MapPin, Settings, Sparkles } from 'lucide-react';
+import { CONTAINER_CLASS } from '../constants';
 
 const Profile = () => {
     const { user, logout } = useAuth();
 
+    const userName = user?.user_metadata?.first_name || user?.email?.split('@')[0] || 'Usuário';
+    const userFullName = user?.user_metadata?.full_name || user?.user_metadata?.first_name || userName;
+
     return (
-        <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
-            <div className="max-w-3xl mx-auto">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden"
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className={`${CONTAINER_CLASS} pt-12 pb-20 min-h-screen`}
+        >
+            {/* Header */}
+            <div className="mb-8">
+                <h1 className="text-4xl font-black text-gray-900 mb-2">
+                    Meu Perfil
+                </h1>
+                <p className="text-gray-500">Gerencie suas informações e pedidos</p>
+            </div>
+
+            {/* Card do Usuário */}
+            <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-6 md:p-8 mb-6">
+                <div className="flex flex-col md:flex-row items-center gap-6">
+                    {/* Avatar */}
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-brand-blue to-brand-pink flex items-center justify-center shrink-0">
+                        <span className="text-3xl font-bold text-white">
+                            {userName.charAt(0).toUpperCase()}
+                        </span>
+                    </div>
+
+                    {/* Informações */}
+                    <div className="flex-1 text-center md:text-left space-y-2">
+                        <h2 className="text-2xl font-bold text-gray-900">{userFullName}</h2>
+                        <p className="text-gray-500 flex items-center justify-center md:justify-start gap-2">
+                            <Mail size={16} />
+                            {user?.email}
+                        </p>
+                    </div>
+
+                    {/* Botão Configurações */}
+                    <Link
+                        to="/admin"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+                    >
+                        <Settings size={18} />
+                        Admin
+                    </Link>
+                </div>
+            </div>
+
+            {/* Grid de Opções */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Meus Pedidos */}
+                <Link
+                    to="/admin/pedidos"
+                    className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-6 hover:shadow-md hover:border-brand-blue/30 transition-all group"
                 >
-                    <div className="px-6 py-8 sm:p-10">
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">
-                            Meu Perfil
-                        </h1>
-
-                        <div className="space-y-6">
-                            {/* Card de Informação do Usuário */}
-                            <div className="flex items-center p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
-                                <div className="flex-shrink-0 bg-indigo-100 dark:bg-indigo-800 p-3 rounded-full">
-                                    <User className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                                        Nome / Identificador
-                                    </p>
-                                    <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                                        {user?.user_metadata?.full_name || 'Usuário'}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
-                                <div className="flex-shrink-0 bg-indigo-100 dark:bg-indigo-800 p-3 rounded-full">
-                                    <Mail className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-                                </div>
-                                <div className="ml-4">
-                                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                                        Email
-                                    </p>
-                                    <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                                        {user?.email}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                                <button
-                                    onClick={logout}
-                                    className="flex items-center justify-center w-full px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
-                                >
-                                    <LogOut className="h-4 w-4 mr-2" />
-                                    Sair da Conta
-                                </button>
-                            </div>
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <Package className="text-brand-blue" size={24} />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-gray-900">Meus Pedidos</h3>
+                            <p className="text-sm text-gray-500">Ver histórico de compras</p>
                         </div>
                     </div>
-                </motion.div>
+                </Link>
+
+                {/* Endereços */}
+                <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-6 hover:shadow-md hover:border-brand-pink/30 transition-all group cursor-not-allowed opacity-60">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl pink-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <MapPin className="text-brand-pink" size={24} />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-gray-900">Endereços</h3>
+                            <p className="text-sm text-gray-500">Gerenciar endereços (em breve)</p>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
+
+            {/* Botão Sair */}
+            <div className="mt-8 pt-6 border-t border-gray-100">
+                <button
+                    onClick={logout}
+                    className="flex items-center justify-center gap-2 w-full px-6 py-4 bg-gray-900 text-white rounded-2xl font-bold hover:bg-black hover:scale-[1.01] active:scale-[0.99] transition-all"
+                >
+                    <LogOut size={20} />
+                    Sair da Conta
+                </button>
+            </div>
+
+            {/* Mensagem de Boas-vindas */}
+            <div className="mt-8 bg-gradient-to-r from-brand-blue/10 to-brand-pink/10 rounded-[2rem] p-6 text-center">
+                <Sparkles className="mx-auto text-brand-pink mb-2" size={24} />
+                <p className="text-gray-700 font-medium">
+                    Obrigado por fazer parte da família Tralalá Criativo!
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                    Transforme suas ideias em presentes inesquecíveis.
+                </p>
+            </div>
+        </motion.div>
     );
 };
 

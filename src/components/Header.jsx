@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'; // Adicionei useEffect
 import { Link } from 'react-router-dom';
-import { ShoppingCart, Menu, X, User, LogOut } from 'lucide-react';
+import { ShoppingCart, Menu, X, User, LogOut, Settings } from 'lucide-react';
 
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -19,7 +19,7 @@ const Header = () => {
     async function pegarNomeDoPerfil() {
       if (user) {
         // Busca na tabela profiles onde o ID é igual ao do usuário logado
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('profiles')
           .select('first_name')
           .eq('id', user.id)
@@ -27,7 +27,7 @@ const Header = () => {
 
         if (data && data.first_name) {
           setNomeExibicao(data.first_name);
-        } else {
+        } else if (user.email) {
           // Fallback: se não achar, usa o e-mail cortado
           setNomeExibicao(user.email.split('@')[0]);
         }
@@ -75,10 +75,13 @@ const Header = () => {
               )}
             </button>
 
-            {/* --- ÁREA DO USUÁRIO --- */}
+              {/* --- ÁREA DO USUÁRIO --- */}
             {user ? (
               // SE ESTIVER LOGADO
               <div className="flex items-center gap-2 ml-4 pl-4 border-l border-gray-200">
+                <Link to="/admin" title="Admin" className="p-2 text-gray-500 hover:text-brand-blue hover:bg-blue-50 rounded-full transition-colors">
+                  <Settings size={18} />
+                </Link>
                 <Link to="/perfil" className="flex items-center gap-2 text-sm font-bold text-brand-blue hover:text-brand-pink transition-colors">
                   <User size={18} />
                   {/* AQUI MOSTRAMOS O NOME VINDO DO BANCO */}
