@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { Mail, User, Phone, MapPin, Lock, Save, Loader2 } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Mail, User, Phone, MapPin, Lock, Save, Loader2, Package, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase';
 
@@ -32,6 +32,10 @@ const Perfil = () => {
     newPassword: '',
     confirmPassword: '',
   });
+
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [expandedOrders, setExpandedOrders] = useState({});
 
   // Proteção de rota - redireciona se não logado
   useEffect(() => {
@@ -78,6 +82,33 @@ const Perfil = () => {
     };
 
     loadProfile();
+  }, [user]);
+
+  // Carrega histórico de encomendas
+  useEffect(() => {
+    const loadOrders = async () => {
+      if (!user) return;
+
+      setOrdersLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*, order_items(*)')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        setOrders(data || []);
+      } catch (err) {
+        console.error('Erro ao carregar encomendas:', err);
+        setOrders([]);
+      } finally {
+        setOrdersLoading(false);
+      }
+    };
+
+    loadOrders();
   }, [user]);
 
   // Salva dados pessoais
@@ -171,6 +202,37 @@ const Perfil = () => {
     } finally {
       setPasswordLoading(false);
     }
+  };
+
+  // Formatar data
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('pt-PT');
+  };
+
+  // Toggle expandir encomenda
+  const toggleOrderExpansion = (orderId) => {
+    setExpandedOrders(prev => ({
+      ...prev,
+      [orderId]: !prev[orderId]
+    }));
+  };
+
+  // Badge de status
+  const StatusBadge = ({ status }) => {
+    const statusConfig = {
+      pendente: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Pendente' },
+      pago: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Pago' },
+      enviado: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Enviado' },
+      entregue: { bg: 'bg-green-100', text: 'text-green-700', label: 'Entregue' }
+    };
+
+    const config = statusConfig[status] || statusConfig.pendente;
+
+    return (
+      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${config.bg} ${config.text}`}>
+        {config.label}
+      </span>
+    );
   };
 
   if (!user) return null;
@@ -449,6 +511,110 @@ const Perfil = () => {
               )}
             </button>
           </form>
+        </motion.div>
+
+        {/* Histórico de Encomendas */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100"
+        >
+          <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+            <Package className="text-brand-blue" size={24} />
+            Histórico de Encomendas
+          </h2>
+
+          {ordersLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="animate-spin text-brand-blue" size={32} />
+            </div>
+          ) : orders.length === 0 ? (
+            <div className="text-center py-12">
+              <Package className="mx-auto text-gray-300 mb-4" size={48} />
+              <p className="text-gray-500 mb-4">Ainda não fizeste nenhuma encomenda</p>
+              <Link
+                to="/produtos"
+                className="inline-block bg-gradient-to-r from-brand-blue to-brand-purple text-white font-bold px-6 py-3 rounded-xl shadow-md hover:brightness-110 transition-all cursor-pointer"
+              >
+                Explorar Produtos
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {orders.map((order) => (
+                <div
+                  key={order.id}
+                  className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden"
+                >
+                  {/* Cabeçalho da Encomenda */}
+                  <div
+                    onClick={() => toggleOrderExpansion(order.id)}
+                    className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 cursor-pointer hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-gray-500 font-medium">
+                        {formatDate(order.created_at)}
+                      </span>
+                      <StatusBadge status={order.status} />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold text-gray-800">
+                        {order.total_amount?.toFixed(2)} €
+                      </span>
+                      {expandedOrders[order.id] ? (
+                        <ChevronUp className="text-gray-400" size={20} />
+                      ) : (
+                        <ChevronDown className="text-gray-400" size={20} />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Detalhes Expandidos */}
+                  {expandedOrders[order.id] && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="border-t border-gray-200 p-4 bg-white"
+                    >
+                      <h3 className="font-semibold text-gray-700 mb-3">Itens da Encomenda:</h3>
+                      <div className="space-y-2">
+                        {order.order_items?.map((item, index) => (
+                          <div
+                            key={index}
+                            className="flex justify-between items-start text-sm"
+                          >
+                            <div className="flex-1">
+                              <p className="font-medium text-gray-800">{item.name}</p>
+                              {item.customization && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {Object.entries(item.customization).map(([key, value]) => (
+                                    <span key={key} className="mr-2">
+                                      {key}: {value}
+                                    </span>
+                                  ))}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right ml-4">
+                              <p className="text-gray-600">
+                                {item.quantity}x {item.price?.toFixed(2)} €
+                              </p>
+                              <p className="font-semibold text-gray-800">
+                                {(item.quantity * item.price)?.toFixed(2)} €
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </motion.div>
       </div>
     </motion.div>
