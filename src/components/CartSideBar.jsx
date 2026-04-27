@@ -1,7 +1,8 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { X, Trash2, ShoppingBag, ArrowRight, FileText, Image as ImageIcon, Plus, Minus, Loader2 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { formatPriceSimple } from '../utils/formatters';
 
 const CartSidebar = () => {
   // Pegamos a nova função updateQuantity do contexto
@@ -121,7 +122,7 @@ const CartSidebar = () => {
                         </div>
 
                         <span className="font-bold text-brand-blue">
-                          {(item.price * item.quantity).toFixed(2).replace('.', ',')} €
+                          {formatPriceSimple(item.price * item.quantity)}
                         </span>
                       </div>
                     </div>
@@ -135,7 +136,7 @@ const CartSidebar = () => {
               <div className="p-6 border-t border-gray-100 bg-white">
                 <div className="flex justify-between items-center mb-6">
                   <span className="text-gray-500 font-medium">Subtotal</span>
-                  <span className="text-3xl font-black text-gray-900">{cartTotal.toFixed(2).replace('.', ',')} €</span>
+                  <span className="text-3xl font-black text-gray-900">{formatPriceSimple(cartTotal)}</span>
                 </div>
                 <button
                   type="button"

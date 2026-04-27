@@ -24,11 +24,16 @@ export default {
       },
       animation: {
         'border-dance': 'border-dance 4s linear infinite',
+        'fade-in': 'fadeIn 0.15s ease-out forwards',
       },
       keyframes: {
         'border-dance': {
           '0%': { backgroundPosition: '0% 50%' },
           '100%': { backgroundPosition: '100% 50%' },
+        },
+        'fadeIn': {
+          from: { opacity: '0' },
+          to: { opacity: '1' },
         },
       },
     },

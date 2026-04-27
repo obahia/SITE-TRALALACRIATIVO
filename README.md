@@ -37,7 +37,7 @@ O projeto utiliza o que há de mais avançado no ecossistema de desenvolvimento 
 
 ## 📈 Próximos Passos
 *   [ ] Implementação de **Visualização 3D** interativa para canecas e brindes.
-*   [ ] Painel administrativo para gestão dinâmica de estoque.
+* ✅ Painel administrativo para gestão dinâmica de estoque.
 *   [ ] Sistema de busca avançada com filtros inteligentes.
 
 ---
