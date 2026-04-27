@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { supabase } from '../services/supabase';
 
 import ProductCard from '../components/ProductCard';
+import TestimonialCarousel from '../components/TestimonialCarousel';
 
 const Home = () => {
   const scrollRef = useRef(null);
@@ -153,6 +154,9 @@ const Home = () => {
           </div>
         </div>
       </section>
+
+      {/* --- CARROSSEL DE AVALIAÇÕES --- */}
+      <TestimonialCarousel />
 
       {/* --- CTA --- */}
       <section className={`${containerClass} py-12 pb-24`}>
