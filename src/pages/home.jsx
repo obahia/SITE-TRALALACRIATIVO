@@ -120,10 +120,10 @@ const Home = () => {
 
             {/* Navegação */}
             <div className="flex gap-2">
-              <button onClick={() => scroll('left')} className="p-3 rounded-full bg-white shadow-sm border border-gray-100 hover:bg-brand-blue hover:text-white transition active:scale-95">
+              <button onClick={() => scroll('left')} className="p-3 rounded-full bg-white shadow-sm border border-gray-100 hover:bg-brand-blue hover:text-white transition active:scale-95 cursor-pointer">
                 <ChevronLeft size={24} />
               </button>
-              <button onClick={() => scroll('right')} className="p-3 rounded-full bg-white shadow-sm border border-gray-100 hover:bg-brand-blue hover:text-white transition active:scale-95">
+              <button onClick={() => scroll('right')} className="p-3 rounded-full bg-white shadow-sm border border-gray-100 hover:bg-brand-blue hover:text-white transition active:scale-95 cursor-pointer">
                 <ChevronRight size={24} />
               </button>
             </div>

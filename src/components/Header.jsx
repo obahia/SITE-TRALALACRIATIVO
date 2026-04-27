@@ -41,7 +41,7 @@ const Header = () => {
   // -----------------------------------------------------
 
   const containerClass = "container mx-auto px-8 md:px-16 lg:px-32";
-  const navLinkStyle = "text-base font-bold text-gray-600 px-4 py-2 rounded-md transition-all duration-300 hover:bg-[#e8b65a] hover:text-white hover:shadow-md";
+  const navLinkStyle = "text-base font-bold text-gray-600 px-4 py-2 rounded-md transition-all duration-300 hover:bg-brand-blue/10 hover:text-brand-blue hover:shadow-md";
 
   return (
     <>
@@ -67,7 +67,7 @@ const Header = () => {
               onClick={() => setIsCartOpen(true)}
               className="relative p-2 hover:bg-gray-100 rounded-full transition cursor-pointer ml-1 text-brand-dark group"
             >
-              <ShoppingCart className="w-6 h-6 group-hover:text-[#e8b65a] transition-colors" />
+              <ShoppingCart className="w-6 h-6 group-hover:text-brand-blue transition-colors" />
               {cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-brand-pink text-xs font-bold text-white flex items-center justify-center animate-bounce shadow-sm">
                   {cartCount}
@@ -109,12 +109,12 @@ const Header = () => {
 
           {/* MENU MOBILE */}
           <div className="flex items-center gap-4 md:hidden">
-            <button onClick={() => setIsCartOpen(true)} className="relative text-gray-600">
+            <button onClick={() => setIsCartOpen(true)} className="relative text-gray-600 cursor-pointer">
               <ShoppingCart size={28} />
               {cartCount > 0 && <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-brand-pink text-[10px] font-bold text-white flex items-center justify-center">{cartCount}</span>}
             </button>
 
-            <button className="text-gray-600" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+            <button className="text-gray-600 cursor-pointer" onClick={() => setIsMenuOpen(!isMenuOpen)}>
               {isMenuOpen ? <X size={32} /> : <Menu size={32} />}
             </button>
           </div>
@@ -131,10 +131,10 @@ const Header = () => {
                   {/* Nome no mobile também atualizado */}
                   {nomeExibicao || user.email}
                 </span>
-                <button onClick={logout} className="text-xs text-red-500 font-bold border border-red-200 px-2 py-1 rounded bg-white">Sair</button>
+                <button onClick={logout} className="text-xs text-red-500 font-bold border border-red-200 px-2 py-1 rounded bg-white cursor-pointer">Sair</button>
               </div>
             ) : (
-              <button onClick={() => { setIsLoginModalOpen(true); setIsMenuOpen(false); }} className="w-full bg-gray-900 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 mb-2">
+              <button onClick={() => { setIsLoginModalOpen(true); setIsMenuOpen(false); }} className="w-full bg-gray-900 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 mb-2 cursor-pointer">
                 <User size={18} /> Entrar na Conta
               </button>
             )}

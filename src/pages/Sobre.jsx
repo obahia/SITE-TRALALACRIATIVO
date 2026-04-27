@@ -10,7 +10,7 @@ const Sobre = () => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.6 }}
-      className="container mx-auto px-4 md:px-16 lg:px-32 py-12 md:py-20"
+      className="container mx-auto px-8 md:px-16 lg:px-32 py-12 md:py-20"
     >
       <div className="bg-white/60 backdrop-blur-md rounded-[3rem] p-8 md:p-12 shadow-xl border border-white/50 relative overflow-hidden">
         

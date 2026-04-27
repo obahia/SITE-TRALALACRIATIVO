@@ -60,6 +60,15 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  // ✅ NOVA FUNÇÃO: Reset Password
+  const resetPassword = async (email) => {
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin
+    });
+    if (error) throw error;
+    return data;
+  };
+
   const logout = async () => {
     await supabase.auth.signOut();
   };
@@ -71,6 +80,7 @@ export const AuthProvider = ({ children }) => {
       signIn,
       signUp,
       signInWithGoogle, // <--- ADICIONA ISTO AQUI
+      resetPassword, // <--- NOVA FUNÇÃO
       logout,
       loading,
       isLoginModalOpen,

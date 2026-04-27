@@ -4,11 +4,14 @@ import { X, Mail, Lock, Loader2, User, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const LoginModal = ({ isOpen, onClose }) => {
-  const { signIn, signUp, signInWithGoogle } = useAuth();
+  const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
 
   const [isRegistering, setIsRegistering] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
 
   const [formData, setFormData] = useState({
     email: '',
@@ -48,8 +51,36 @@ const LoginModal = ({ isOpen, onClose }) => {
     }
   };
 
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setResetSuccess('');
+
+    try {
+      if (!resetEmail) {
+        throw new Error('Preenche o e-mail 📧');
+      }
+
+      await resetPassword(resetEmail);
+      setResetSuccess(`Link de recuperação enviado para ${resetEmail} 📩`);
+      setResetEmail('');
+      setTimeout(() => {
+        setIsForgotPassword(false);
+        setResetSuccess('');
+      }, 3000);
+    } catch (err) {
+      setError(err.message || 'Erro ao enviar link de recuperação');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleClose = () => {
     setError('');
+    setResetSuccess('');
+    setIsForgotPassword(false);
+    setResetEmail('');
     setFormData({ email: '', password: '', firstName: '', lastName: '' });
     onClose();
   };
@@ -134,6 +165,14 @@ const LoginModal = ({ isOpen, onClose }) => {
             </div>
           )}
 
+          {/* Sucesso - sem animação */}
+          {resetSuccess && (
+            <div className="bg-green-50 text-green-600 p-3 rounded-xl text-sm mb-4 border border-green-100 font-medium flex items-center gap-2">
+              <span className="text-lg">✅</span>
+              {resetSuccess}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Nome / Sobrenome - transição de altura com CSS */}
             <div
@@ -195,6 +234,65 @@ const LoginModal = ({ isOpen, onClose }) => {
                 }
               />
             </div>
+
+            {/* Esqueci a senha - apenas no tab ENTRAR */}
+            {!isRegistering && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsForgotPassword(true);
+                    setError('');
+                  }}
+                  className="text-sm text-brand-blue hover:text-brand-pink font-semibold transition-colors cursor-pointer"
+                >
+                  Esqueci a senha
+                </button>
+              </div>
+            )}
+
+            {/* Formulário de Reset Password - mostrado quando isForgotPassword é true */}
+            {isForgotPassword && (
+              <div className="space-y-3 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                <p className="text-sm text-gray-700 font-medium">Recuperar Senha</p>
+                <form onSubmit={handleResetPassword} className="space-y-3">
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-3.5 text-gray-400" size={18} />
+                    <input
+                      type="email"
+                      placeholder="exemplo@email.com"
+                      className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-brand-blue transition-colors"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="flex-1 bg-gradient-to-r from-brand-blue to-brand-purple text-white font-bold py-2.5 rounded-xl hover:brightness-110 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      {loading ? (
+                        <Loader2 className="animate-spin" size={16} />
+                      ) : (
+                        'Enviar link'
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsForgotPassword(false);
+                        setResetEmail('');
+                        setError('');
+                      }}
+                      className="flex-1 bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl hover:bg-gray-300 transition-colors cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
 
             {/* Botão principal */}
             <button

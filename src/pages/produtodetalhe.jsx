@@ -92,7 +92,7 @@ const ProdutoDetalhe = () => {
     if (!product) return null;
 
     return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="container mx-auto px-4 md:px-16 lg:px-32 py-12">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="container mx-auto px-8 md:px-16 lg:px-32 py-12">
             <Link to="/produtos" className="inline-flex items-center gap-2 text-gray-500 hover:text-brand-blue mb-8 transition-colors font-medium">
                 <ArrowLeft size={20} /> Voltar para produtos
             </Link>
@@ -197,7 +197,7 @@ const ProdutoDetalhe = () => {
                                         <div className="h-full aspect-square rounded-xl overflow-hidden border border-gray-200 bg-white shadow-sm"><img src={uploadedImage} alt="Upload" className="w-full h-full object-cover" /></div>
                                         <div className="flex-1">
                                             <p className="font-bold text-gray-800 text-sm">Imagem recebida!</p>
-                                            <button onClick={removeImage} className="mt-2 text-red-500 text-xs font-bold hover:text-red-700 bg-white border border-gray-200 px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1 shadow-sm hover:bg-red-50"><X size={14} /> Remover</button>
+                                            <button onClick={removeImage} className="mt-2 text-red-500 text-xs font-bold hover:text-red-700 bg-white border border-gray-200 px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1 shadow-sm hover:bg-red-50 cursor-pointer"><X size={14} /> Remover</button>
                                         </div>
                                     </div>
                                 ) : (

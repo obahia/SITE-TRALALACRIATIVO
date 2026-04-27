@@ -69,7 +69,7 @@ const CartSidebar = () => {
                       <div>
                         <div className="flex justify-between items-start">
                           <h3 className="font-bold text-gray-800 text-sm">{item.name}</h3>
-                          <button onClick={() => removeFromCart(item.cartId)} className="text-gray-300 hover:text-red-500 transition"><Trash2 size={16} /></button>
+                          <button onClick={() => removeFromCart(item.cartId)} className="text-gray-300 hover:text-red-500 transition cursor-pointer"><Trash2 size={16} /></button>
                         </div>
 
                         {/* Personalização */}
@@ -102,7 +102,7 @@ const CartSidebar = () => {
                         <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-1 border border-gray-200">
                           <button
                             onClick={() => updateQuantity(item.cartId, -1)}
-                            className="w-6 h-6 flex items-center justify-center bg-white rounded shadow-sm text-gray-600 hover:text-brand-pink active:scale-95 transition"
+                            className="w-6 h-6 flex items-center justify-center bg-white rounded shadow-sm text-gray-600 hover:text-brand-pink active:scale-95 transition cursor-pointer"
                             disabled={item.quantity <= 1} // Desabilita se for 1
                           >
                             <Minus size={12} />
@@ -114,7 +114,7 @@ const CartSidebar = () => {
 
                           <button
                             onClick={() => updateQuantity(item.cartId, 1)}
-                            className="w-6 h-6 flex items-center justify-center bg-white rounded shadow-sm text-gray-600 hover:text-brand-blue active:scale-95 transition"
+                            className="w-6 h-6 flex items-center justify-center bg-white rounded shadow-sm text-gray-600 hover:text-brand-blue active:scale-95 transition cursor-pointer"
                           >
                             <Plus size={12} />
                           </button>

@@ -39,7 +39,7 @@ const Produtos = () => {
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
       transition={{ duration: 0.5 }}
-      className="min-h-screen py-10 px-4"
+      className="min-h-screen py-10 px-8 md:px-16 lg:px-32"
     >
       <div className="max-w-6xl mx-auto">
         <h1 className="text-4xl font-bold text-center text-slate-700 mb-2">Nossos Produtos</h1>
