@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react'; // Adicionei useEffect
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { ShoppingCart, Menu, X, User, LogOut } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -13,6 +14,19 @@ const Header = () => {
 
   const { cartCount, setIsCartOpen } = useCart();
   const { user, logout, isLoginModalOpen, setIsLoginModalOpen } = useAuth();
+  const location = useLocation();
+
+  // Scroll lock para o menu mobile
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, [isMenuOpen]);
 
   // --- NOVA LÓGICA: Buscar o nome na tabela profiles ---
   useEffect(() => {
@@ -41,14 +55,22 @@ const Header = () => {
   // -----------------------------------------------------
 
   const containerClass = "container mx-auto px-8 md:px-16 lg:px-32";
-  const navLinkStyle = "text-base font-bold text-gray-600 px-4 py-2 rounded-md transition-all duration-300 hover:bg-brand-blue/10 hover:text-brand-blue hover:shadow-md";
+  
+  const getNavLinkStyle = (path) => {
+    const isActive = location.pathname === path;
+    return `text-base font-bold px-4 py-2 rounded-md transition-all duration-300 cursor-pointer ${
+      isActive 
+        ? 'bg-brand-blue/10 text-brand-blue shadow-sm' 
+        : 'text-gray-600 hover:bg-brand-blue/10 hover:text-brand-blue hover:shadow-md'
+    }`;
+  };
 
   return (
     <>
       <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-100 h-24 flex items-center transition-all shadow-sm">
         <div className={`${containerClass} w-full flex items-center justify-between`}>
 
-          <Link to="/" className="flex items-center gap-4 hover:scale-105 transition-transform duration-300 group">
+          <Link to="/" className="flex items-center gap-4 hover:scale-105 transition-transform duration-300 group cursor-pointer">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-tr from-brand-blue to-brand-pink rounded-full blur opacity-0 group-hover:opacity-40 transition-opacity duration-500"></div>
               <img src="/assets/logo.png" alt="Logo" className="relative w-20 h-20 object-cover rounded-full border-white shadow-lg" />
@@ -58,9 +80,9 @@ const Header = () => {
 
           {/* MENU DESKTOP */}
           <nav className="hidden md:flex items-center gap-4">
-            <Link to="/" className={navLinkStyle}>Início</Link>
-            <Link to="/produtos" className={navLinkStyle}>Produtos</Link>
-            <Link to="/sobre" className={navLinkStyle}>Sobre Nós</Link>
+            <Link to="/" className={getNavLinkStyle("/")}>Início</Link>
+            <Link to="/produtos" className={getNavLinkStyle("/produtos")}>Produtos</Link>
+            <Link to="/sobre" className={getNavLinkStyle("/sobre")}>Sobre Nós</Link>
 
             {/* Botão Carrinho */}
             <button
@@ -120,30 +142,72 @@ const Header = () => {
           </div>
         </div>
 
-        {/* Dropdown Mobile */}
-        {isMenuOpen && (
-          <div className="md:hidden bg-white/95 backdrop-blur-xl border-t border-gray-100 p-6 absolute top-24 left-0 w-full shadow-xl flex flex-col gap-4 z-40">
-            {/* Opção de Login Mobile */}
-            {user ? (
-              <div className="flex justify-between items-center bg-blue-50 p-3 rounded-lg mb-2">
-                <span className="font-bold text-brand-blue text-sm flex items-center gap-2">
-                  <User size={16} />
-                  {/* Nome no mobile também atualizado */}
-                  {nomeExibicao || user.email}
-                </span>
-                <button onClick={logout} className="text-xs text-red-500 font-bold border border-red-200 px-2 py-1 rounded bg-white cursor-pointer">Sair</button>
-              </div>
-            ) : (
-              <button onClick={() => { setIsLoginModalOpen(true); setIsMenuOpen(false); }} className="w-full bg-gray-900 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 mb-2 cursor-pointer">
-                <User size={18} /> Entrar na Conta
-              </button>
-            )}
+        {/* Dropdown Mobile substituído por Side-Drawer Animado */}
+        <AnimatePresence>
+          {isMenuOpen && (
+            <>
+              {/* Overlay */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                onClick={() => setIsMenuOpen(false)}
+                className="fixed inset-0 bg-black/50 z-40 md:hidden cursor-pointer"
+              />
+              
+              {/* Drawer */}
+              <motion.div
+                initial={{ x: '100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '100%' }}
+                transition={{ type: 'tween', duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
+                className="fixed top-0 right-0 h-full w-[80%] max-w-sm bg-white shadow-2xl z-50 flex flex-col md:hidden overflow-y-auto"
+              >
+                <div className="p-6 flex flex-col gap-6 flex-1">
+                  <div className="flex justify-between items-center pb-4 border-b border-gray-100">
+                    <span className="text-xl font-bold text-brand-dark">Menu</span>
+                    <button 
+                      onClick={() => setIsMenuOpen(false)}
+                      className="p-2 text-gray-500 hover:text-brand-pink hover:bg-red-50 rounded-full transition-colors cursor-pointer"
+                    >
+                      <X size={24} />
+                    </button>
+                  </div>
 
-            <Link to="/" onClick={() => setIsMenuOpen(false)} className={`block text-center ${navLinkStyle}`}>Início</Link>
-            <Link to="/produtos" onClick={() => setIsMenuOpen(false)} className={`block text-center ${navLinkStyle}`}>Produtos</Link>
-            <Link to="/sobre" onClick={() => setIsMenuOpen(false)} className={`block text-center ${navLinkStyle}`}>Sobre Nós</Link>
-          </div>
-        )}
+                  {/* Opção de Login Mobile */}
+                  {user ? (
+                    <div className="flex justify-between items-center bg-brand-blue/5 p-4 rounded-xl border border-brand-blue/10">
+                      <span className="font-bold text-brand-blue flex items-center gap-2 max-w-[70%] truncate">
+                        <User size={18} className="shrink-0" />
+                        <span className="truncate">{nomeExibicao || user.email}</span>
+                      </span>
+                      <button 
+                        onClick={() => { logout(); setIsMenuOpen(false); }} 
+                        className="text-xs text-red-500 font-bold border border-red-200 px-3 py-1.5 rounded-lg bg-white hover:bg-red-50 transition-colors cursor-pointer shrink-0"
+                      >
+                        Sair
+                      </button>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => { setIsLoginModalOpen(true); setIsMenuOpen(false); }} 
+                      className="w-full bg-gray-900 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 shadow-md hover:bg-black transition-all cursor-pointer"
+                    >
+                      <User size={18} /> Entrar na Conta
+                    </button>
+                  )}
+
+                  <nav className="flex flex-col gap-2 mt-2">
+                    <Link to="/" onClick={() => setIsMenuOpen(false)} className={`block ${getNavLinkStyle("/")}`}>Início</Link>
+                    <Link to="/produtos" onClick={() => setIsMenuOpen(false)} className={`block ${getNavLinkStyle("/produtos")}`}>Produtos</Link>
+                    <Link to="/sobre" onClick={() => setIsMenuOpen(false)} className={`block ${getNavLinkStyle("/sobre")}`}>Sobre Nós</Link>
+                  </nav>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
       </header>
 
       <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
