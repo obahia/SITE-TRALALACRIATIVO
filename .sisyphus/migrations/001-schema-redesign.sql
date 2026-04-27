@@ -1,35 +1,15 @@
--- Migration: Add category, testimonials, shipping_costs schema + profiles address fields
+-- Migration: Create testimonials, shipping_costs tables + profiles address fields
 -- Date: 2026-04-27
 -- Purpose: Foundation for Tralalá Criativo redesign
+-- 
+-- NOTE: products.category already exists with values: 'Azulejos', 'Camisetas', 'Canecas', 'Acessórios'
+-- This migration only covers the REMAINING schema changes.
+-- Execute via Supabase Dashboard SQL Editor: https://supabase.com/dashboard/project/riioszwtwjbestbxbzxu/sql
 
 -- ============================================================================
--- 1. Add category column to products table
+-- 1. Create testimonials table
 -- ============================================================================
-ALTER TABLE products ADD COLUMN category TEXT;
-
--- Add constraint to ensure valid categories
-ALTER TABLE products ADD CONSTRAINT valid_category CHECK (
-  category IN ('canecas', 'camisetas', 'azulejos', 'kits', 'tote_bags')
-);
-
--- Update existing products with appropriate categories
--- (Assuming product names/descriptions contain category hints)
-UPDATE products SET category = 'canecas' WHERE title ILIKE '%caneca%' OR description ILIKE '%caneca%';
-UPDATE products SET category = 'camisetas' WHERE title ILIKE '%camiseta%' OR description ILIKE '%camiseta%';
-UPDATE products SET category = 'azulejos' WHERE title ILIKE '%azulejo%' OR description ILIKE '%azulejo%';
-UPDATE products SET category = 'kits' WHERE title ILIKE '%kit%' OR description ILIKE '%kit%';
-UPDATE products SET category = 'tote_bags' WHERE title ILIKE '%tote%' OR title ILIKE '%bag%' OR description ILIKE '%tote%';
-
--- Set default category for any remaining products (fallback to canecas)
-UPDATE products SET category = 'canecas' WHERE category IS NULL;
-
--- Make category NOT NULL after populating
-ALTER TABLE products ALTER COLUMN category SET NOT NULL;
-
--- ============================================================================
--- 2. Create testimonials table
--- ============================================================================
-CREATE TABLE testimonials (
+CREATE TABLE IF NOT EXISTS testimonials (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   message TEXT NOT NULL,
@@ -41,24 +21,21 @@ CREATE TABLE testimonials (
 -- Enable RLS on testimonials
 ALTER TABLE testimonials ENABLE ROW LEVEL SECURITY;
 
--- RLS Policy: Allow authenticated users to read all testimonials
-CREATE POLICY "Allow authenticated users to read testimonials"
-  ON testimonials FOR SELECT
-  USING (auth.role() = 'authenticated');
-
--- RLS Policy: Only admins can insert/update/delete (for now, restrict to prevent user submissions)
-CREATE POLICY "Prevent user inserts on testimonials"
-  ON testimonials FOR INSERT
-  WITH CHECK (FALSE);
+-- RLS Policy: Allow anyone to read testimonials (public data)
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Allow public read on testimonials') THEN
+    CREATE POLICY "Allow public read on testimonials"
+      ON testimonials FOR SELECT
+      USING (true);
+  END IF;
+END $$;
 
 -- ============================================================================
--- 3. Create shipping_costs table
+-- 2. Create shipping_costs table
 -- ============================================================================
-CREATE TABLE shipping_costs (
+CREATE TABLE IF NOT EXISTS shipping_costs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  category TEXT NOT NULL UNIQUE CHECK (
-    category IN ('canecas', 'camisetas', 'azulejos', 'kits', 'tote_bags')
-  ),
+  category TEXT NOT NULL UNIQUE,
   cost NUMERIC(10, 2) NOT NULL CHECK (cost > 0),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -67,35 +44,46 @@ CREATE TABLE shipping_costs (
 -- Enable RLS on shipping_costs
 ALTER TABLE shipping_costs ENABLE ROW LEVEL SECURITY;
 
--- RLS Policy: Allow authenticated users to read shipping costs
-CREATE POLICY "Allow authenticated users to read shipping costs"
-  ON shipping_costs FOR SELECT
-  USING (auth.role() = 'authenticated');
+-- RLS Policy: Allow anyone to read shipping costs (public data)
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Allow public read on shipping_costs') THEN
+    CREATE POLICY "Allow public read on shipping_costs"
+      ON shipping_costs FOR SELECT
+      USING (true);
+  END IF;
+END $$;
 
--- RLS Policy: Prevent user inserts/updates
-CREATE POLICY "Prevent user inserts on shipping costs"
-  ON shipping_costs FOR INSERT
-  WITH CHECK (FALSE);
-
--- Seed shipping costs
+-- Seed shipping costs (matching actual product categories)
 INSERT INTO shipping_costs (category, cost) VALUES
-  ('canecas', 4.50),
-  ('camisetas', 3.50),
-  ('azulejos', 5.00),
-  ('kits', 6.00),
-  ('tote_bags', 3.50);
+  ('Canecas', 4.50),
+  ('Camisetas', 3.50),
+  ('Azulejos', 5.00),
+  ('Acessórios', 3.50)
+ON CONFLICT (category) DO NOTHING;
 
 -- ============================================================================
--- 4. Add address fields to profiles table
+-- 3. Add address fields to profiles table (idempotent)
 -- ============================================================================
-ALTER TABLE profiles ADD COLUMN phone TEXT;
-ALTER TABLE profiles ADD COLUMN street TEXT;
-ALTER TABLE profiles ADD COLUMN city TEXT;
-ALTER TABLE profiles ADD COLUMN postal_code TEXT;
-ALTER TABLE profiles ADD COLUMN country TEXT DEFAULT 'PT';
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'phone') THEN
+    ALTER TABLE profiles ADD COLUMN phone TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'street') THEN
+    ALTER TABLE profiles ADD COLUMN street TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'city') THEN
+    ALTER TABLE profiles ADD COLUMN city TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'postal_code') THEN
+    ALTER TABLE profiles ADD COLUMN postal_code TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'country') THEN
+    ALTER TABLE profiles ADD COLUMN country TEXT DEFAULT 'PT';
+  END IF;
+END $$;
 
 -- ============================================================================
--- 5. Seed testimonials with realistic Portuguese customer data
+-- 4. Seed testimonials with realistic Portuguese customer data
 -- ============================================================================
 INSERT INTO testimonials (name, message, rating, avatar_url) VALUES
   (
@@ -118,7 +106,7 @@ INSERT INTO testimonials (name, message, rating, avatar_url) VALUES
   ),
   (
     'Pedro Oliveira',
-    'Kit de presentes perfeito para oferecer. Entrega rápida e bem apresentado.',
+    'Presente perfeito para oferecer no Natal. Entrega rápida e bem apresentado.',
     5,
     NULL
   ),
@@ -130,10 +118,16 @@ INSERT INTO testimonials (name, message, rating, avatar_url) VALUES
   );
 
 -- ============================================================================
--- 6. Verify RLS is enabled on all modified tables
+-- 5. Add RLS policy for profiles address update (users can update their own)
 -- ============================================================================
--- Note: products table should already have RLS; verify it's enabled
--- ALTER TABLE products ENABLE ROW LEVEL SECURITY; -- Uncomment if needed
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can update own profile address') THEN
+    CREATE POLICY "Users can update own profile address"
+      ON profiles FOR UPDATE
+      USING (auth.uid() = id)
+      WITH CHECK (auth.uid() = id);
+  END IF;
+END $$;
 
 -- ============================================================================
 -- End of migration

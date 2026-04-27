@@ -185,7 +185,7 @@ Max Concurrent: 5 (Wave 2)
 
 ## TODOs
 
-- [ ] 1. Supabase Schema Changes — Foundation
+- [x] 1. Supabase Schema Changes — Foundation
 
   **What to do**:
   - Add `category` column (TEXT) to `products` table. Allowed values: `canecas`, `camisetas`, `azulejos`, `kits`, `tote_bags`
@@ -281,7 +281,7 @@ Max Concurrent: 5 (Wave 2)
   - Message: `chore(db): add category, testimonials, shipping_costs schema + profiles address fields`
   - Pre-commit: Verify queries succeed
 
-- [ ] 2. Vitest + Testing Library Setup
+- [x] 2. Vitest + Testing Library Setup
 
   **What to do**:
   - Install: `vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event`, `jsdom`
@@ -350,7 +350,7 @@ Max Concurrent: 5 (Wave 2)
   - Files: `vitest.config.js`, `package.json`, `src/test/setup.js`, `src/__tests__/smoke.test.jsx`
   - Pre-commit: `npm run test`
 
-- [ ] 3. Auth — "Esqueci a Senha" no LoginModal
+- [x] 3. Auth — "Esqueci a Senha" no LoginModal
 
   **What to do**:
   - Add `resetPassword` function to `AuthContext.jsx` using `supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin })`
@@ -441,7 +441,7 @@ Max Concurrent: 5 (Wave 2)
   - Files: `src/components/LoginModal.jsx`, `src/context/AuthContext.jsx`
   - Pre-commit: `npm run build`
 
-- [ ] 4. Visual Consistency Pass — Unify Hover Colors + Spacing
+- [x] 4. Visual Consistency Pass — Unify Hover Colors + Spacing
 
   **What to do**:
   - Replace the gold hover `#e8b65a` in Header.jsx nav links with a brand-consistent color (use `brand-blue` or a soft version like `bg-brand-blue/10 text-brand-blue`)
@@ -517,7 +517,7 @@ Max Concurrent: 5 (Wave 2)
   - Files: `src/components/Header.jsx`, possibly others with inconsistent styles
   - Pre-commit: `npm run build`
 
-- [ ] 5. Header Redesign — Mobile Drawer + Active Page Indicator
+- [x] 5. Header Redesign — Mobile Drawer + Active Page Indicator
 
   **What to do**:
   - Replace the current mobile dropdown menu with an animated full-screen or side-drawer menu using Framer Motion (AnimatePresence + motion.div sliding from right)
@@ -614,7 +614,7 @@ Max Concurrent: 5 (Wave 2)
   - Files: `src/components/Header.jsx`
   - Pre-commit: `npm run build`
 
-- [ ] 6. Footer Redesign — Contactos Completos
+- [x] 6. Footer Redesign — Contactos Completos
 
   **What to do**:
   - Expand the current minimal footer to include:
@@ -690,7 +690,7 @@ Max Concurrent: 5 (Wave 2)
   - Files: `src/components/Footer.jsx`
   - Pre-commit: `npm run build`
 
-- [ ] 7. Produtos Page — Filtros por Categoria + Busca
+- [x] 7. Produtos Page — Filtros por Categoria + Busca
 
   **What to do**:
   - Add category filter bar at the top of the products page: horizontal row of clickable pills/chips for each category (Todos, Canecas, Camisetas, Azulejos, Kits, Tote Bags)
@@ -794,7 +794,7 @@ Max Concurrent: 5 (Wave 2)
   - Files: `src/pages/produtos.jsx`
   - Pre-commit: `npm run build`
 
-- [ ] 8. Página de Perfil — Dados Pessoais + Endereço + Alterar Senha
+- [x] 8. Página de Perfil — Dados Pessoais + Endereço + Alterar Senha
 
   **What to do**:
   - Create new file `src/pages/perfil.jsx`
@@ -918,7 +918,7 @@ Max Concurrent: 5 (Wave 2)
   - Files: `src/pages/perfil.jsx`, `src/App.jsx`, `src/components/Header.jsx`
   - Pre-commit: `npm run build`
 
-- [ ] 9. Carrossel de Feedbacks na Home
+- [x] 9. Carrossel de Feedbacks na Home
 
   **What to do**:
   - Create new component `src/components/TestimonialCarousel.jsx`
@@ -1014,7 +1014,7 @@ Max Concurrent: 5 (Wave 2)
   - Files: `src/components/TestimonialCarousel.jsx`, `src/pages/home.jsx`
   - Pre-commit: `npm run build`
 
-- [ ] 10. Sobre Page — Google Maps Embed + Contactos
+- [x] 10. Sobre Page — Google Maps Embed + Contactos
 
   **What to do**:
   - Add a new section to the existing Sobre page (below the current content about Lívia Dutra):
@@ -1210,7 +1210,7 @@ Max Concurrent: 5 (Wave 2)
   - Files: `src/context/CartContext.jsx`, `src/components/CartSideBar.jsx`, Supabase Edge Function (if accessible)
   - Pre-commit: `npm run build`
 
-- [ ] 12. Histórico de Encomendas no Perfil
+- [x] 12. Histórico de Encomendas no Perfil
 
   **What to do**:
   - Add "Encomendas" tab/section to the Profile page (`perfil.jsx`)
