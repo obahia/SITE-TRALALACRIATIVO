@@ -12,6 +12,7 @@ import Home from './pages/home';
 import Produtos from './pages/produtos';
 import Sobre from './pages/Sobre';
 import ProdutoDetalhe from './pages/produtodetalhe';
+import Perfil from './pages/perfil';
 
 import Sucesso from './pages/sucesso';
 import Cancelado from './pages/cancelado';
@@ -26,6 +27,7 @@ const AnimatedRoutes = () => {
         <Route path="/produtos" element={<Produtos />} />
         <Route path="/sobre" element={<Sobre />} />
         <Route path="/produto/:id" element={<ProdutoDetalhe />} />
+        <Route path="/perfil" element={<Perfil />} />
         <Route path="/sucesso" element={<Sucesso />} />
         <Route path="/cancelado" element={<Cancelado />} />
       </Routes>

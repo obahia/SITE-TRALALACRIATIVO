@@ -108,6 +108,13 @@ const Header = () => {
                     {nomeExibicao || 'Carregando...'}
                   </span>
                 </div>
+                <Link
+                  to="/perfil"
+                  title="Meu Perfil"
+                  className="p-2 text-gray-400 hover:text-brand-blue hover:bg-brand-blue/10 rounded-full transition-colors cursor-pointer"
+                >
+                  <User size={18} />
+                </Link>
                 <button
                   onClick={logout}
                   title="Sair"
@@ -202,6 +209,9 @@ const Header = () => {
                     <Link to="/" onClick={() => setIsMenuOpen(false)} className={`block ${getNavLinkStyle("/")}`}>Início</Link>
                     <Link to="/produtos" onClick={() => setIsMenuOpen(false)} className={`block ${getNavLinkStyle("/produtos")}`}>Produtos</Link>
                     <Link to="/sobre" onClick={() => setIsMenuOpen(false)} className={`block ${getNavLinkStyle("/sobre")}`}>Sobre Nós</Link>
+                    {user && (
+                      <Link to="/perfil" onClick={() => setIsMenuOpen(false)} className={`block ${getNavLinkStyle("/perfil")}`}>Meu Perfil</Link>
+                    )}
                   </nav>
                 </div>
               </motion.div>
