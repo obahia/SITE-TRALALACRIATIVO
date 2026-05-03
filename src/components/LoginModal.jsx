@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Lock, Loader2, User, Sparkles } from 'lucide-react';
+import { X, Mail, Lock, Loader2, User, Sparkles, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const LoginModal = ({ isOpen, onClose }) => {
@@ -12,12 +12,17 @@ const LoginModal = ({ isOpen, onClose }) => {
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetSuccess, setResetSuccess] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     firstName: '',
     lastName: '',
+    confirmPassword: '',
   });
 
   const handleSubmit = async (e) => {
@@ -28,7 +33,15 @@ const LoginModal = ({ isOpen, onClose }) => {
     try {
       if (isRegistering) {
         if (!formData.firstName || !formData.lastName) {
-          throw new Error('Preenche nome e sobrenome 👀');
+          throw new Error('Preenche o nome e o apelido');
+        }
+        if (formData.password.length < 6) {
+          setPasswordError('A palavra-passe deve ter pelo menos 6 caracteres');
+          return;
+        }
+        if (formData.password !== formData.confirmPassword) {
+          setPasswordError('As palavras-passe nao coincidem');
+          return;
         }
 
         await signUp(
@@ -38,8 +51,11 @@ const LoginModal = ({ isOpen, onClose }) => {
           formData.lastName
         );
 
-        alert('Conta criada! Confirma o e-mail 📩');
-        onClose();
+        setSuccessMessage('Conta criada com sucesso! Verifica o teu email para confirmar a conta.');
+        setTimeout(() => {
+          setSuccessMessage('');
+          onClose();
+        }, 3000);
       } else {
         await signIn(formData.email, formData.password);
         onClose();
@@ -59,11 +75,11 @@ const LoginModal = ({ isOpen, onClose }) => {
 
     try {
       if (!resetEmail) {
-        throw new Error('Preenche o e-mail 📧');
+        throw new Error('Preenche o email');
       }
 
       await resetPassword(resetEmail);
-      setResetSuccess(`Link de recuperação enviado para ${resetEmail} 📩`);
+      setResetSuccess(`Link de recuperacao enviado para ${resetEmail}`);
       setResetEmail('');
       setTimeout(() => {
         setIsForgotPassword(false);
@@ -79,9 +95,11 @@ const LoginModal = ({ isOpen, onClose }) => {
   const handleClose = () => {
     setError('');
     setResetSuccess('');
+    setSuccessMessage('');
+    setPasswordError('');
     setIsForgotPassword(false);
     setResetEmail('');
-    setFormData({ email: '', password: '', firstName: '', lastName: '' });
+    setFormData({ email: '', password: '', firstName: '', lastName: '', confirmPassword: '' });
     onClose();
   };
 
@@ -160,15 +178,20 @@ const LoginModal = ({ isOpen, onClose }) => {
           {/* Erro - sem animação */}
           {error && (
             <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm mb-4 border border-red-100 font-medium flex items-center gap-2">
-              <span className="text-lg">⚠️</span>
               {error}
+            </div>
+          )}
+
+          {/* Sucesso In-App */}
+          {successMessage && (
+            <div className="bg-green-50 text-green-600 p-3 rounded-xl text-sm mb-4 border border-green-100 font-medium flex items-center gap-2">
+              {successMessage}
             </div>
           )}
 
           {/* Sucesso - sem animação */}
           {resetSuccess && (
             <div className="bg-green-50 text-green-600 p-3 rounded-xl text-sm mb-4 border border-green-100 font-medium flex items-center gap-2">
-              <span className="text-lg">✅</span>
               {resetSuccess}
             </div>
           )}
@@ -176,7 +199,7 @@ const LoginModal = ({ isOpen, onClose }) => {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Nome / Sobrenome - transição de altura com CSS */}
             <div
-              className={`flex gap-3 overflow-hidden transition-all duration-150 ${isRegistering ? 'max-h-20 opacity-100 mb-0' : 'max-h-0 opacity-0 -mb-4'
+              className={`flex gap-3 overflow-hidden transition-all duration-150 ${isRegistering ? 'max-h-20 opacity-100 mb-4' : 'max-h-0 opacity-0 -mb-4'
                 }`}
             >
               <div className="relative flex-1">
@@ -195,7 +218,7 @@ const LoginModal = ({ isOpen, onClose }) => {
                 <User className="absolute left-4 top-3.5 text-gray-400" size={18} />
                 <input
                   type="text"
-                  placeholder="Sobrenome"
+                  placeholder="Apelido"
                   className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-blue transition-colors"
                   value={formData.lastName}
                   onChange={(e) =>
@@ -221,18 +244,63 @@ const LoginModal = ({ isOpen, onClose }) => {
             </div>
 
             {/* Password */}
-            <div className="relative">
-              <Lock className="absolute left-4 top-3.5 text-gray-400" size={18} />
-              <input
-                type="password"
-                required
-                placeholder="••••••••"
-                className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-blue transition-colors"
-                value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
-              />
+            <div className="space-y-4 transition-all duration-150">
+              <div className="relative">
+                <Lock className="absolute left-4 top-3.5 text-gray-400" size={18} />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  placeholder="Palavra-passe"
+                  className="w-full pl-11 pr-11 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-blue transition-colors"
+                  value={formData.password}
+                  onChange={(e) => {
+                    setFormData({ ...formData, password: e.target.value });
+                    if (passwordError) setPasswordError('');
+                  }}
+                  onBlur={() => {
+                    if (formData.password && formData.password.length < 6) {
+                      setPasswordError('A palavra-passe deve ter pelo menos 6 caracteres');
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-3.5 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+
+              {/* Confirm Password - only visible in register mode */}
+              <div
+                className={`relative overflow-hidden transition-all duration-150 ${isRegistering ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}`}
+              >
+                <Lock className="absolute left-4 top-3.5 text-gray-400" size={18} />
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  required={isRegistering}
+                  placeholder="Confirmar palavra-passe"
+                  className="w-full pl-11 pr-11 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-blue transition-colors"
+                  value={formData.confirmPassword}
+                  onChange={(e) => {
+                    setFormData({ ...formData, confirmPassword: e.target.value });
+                    if (passwordError) setPasswordError('');
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-4 top-3.5 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+
+              {/* Password Error */}
+              {passwordError && (
+                <p className="text-red-500 text-sm font-medium pl-1 -mt-2 mb-2">{passwordError}</p>
+              )}
             </div>
 
             {/* Esqueci a senha - apenas no tab ENTRAR */}

@@ -25,10 +25,13 @@ const AdminProducts = () => {
   const [showInactive, setShowInactive] = useState(false);
   const fileInputRef = useRef(null);
 
+  const CATEGORY_OPTIONS = ['Canecas', 'Camisetas', 'Azulejos', 'Acessórios'];
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: '',
+    category: '',
     image_url: '',
     is_active: true,
     customization_options: [],
@@ -47,9 +50,9 @@ const AdminProducts = () => {
 
       if (error) throw error;
       setProducts(data || []);
-    } catch (error) {
-      console.error('Error fetching products:', error);
-    } finally {
+     } catch (error) {
+       // Error already handled by state
+     } finally {
       setLoading(false);
     }
   };
@@ -59,6 +62,7 @@ const AdminProducts = () => {
       name: '',
       description: '',
       price: '',
+      category: '',
       image_url: '',
       is_active: true,
       customization_options: [],
@@ -72,6 +76,7 @@ const AdminProducts = () => {
       name: product.name,
       description: product.description || '',
       price: product.price?.toString() || '',
+      category: product.category || '',
       image_url: product.image_url || '',
       is_active: product.is_active ?? true,
       customization_options: product.customization_options || [],
@@ -92,10 +97,9 @@ const AdminProducts = () => {
 
       if (error) throw error;
       setProducts(products.filter(p => p.id !== productId));
-    } catch (error) {
-      console.error('Error deleting product:', error);
-      alert('Erro ao eliminar produto');
-    }
+     } catch (error) {
+       alert('Erro ao eliminar produto');
+     }
   };
 
   const handleSave = async () => {
@@ -110,6 +114,7 @@ const AdminProducts = () => {
         name: formData.name,
         description: formData.description,
         price: parseFloat(formData.price),
+        category: formData.category || null,
         image_url: formData.image_url,
         is_active: formData.is_active,
         customization_options: formData.customization_options,
@@ -137,10 +142,9 @@ const AdminProducts = () => {
       }
 
       handleCancel();
-    } catch (error) {
-      console.error('Error saving product:', error);
-      alert('Erro ao guardar produto');
-    } finally {
+     } catch (error) {
+       alert('Erro ao guardar produto');
+     } finally {
       setSaving(false);
     }
   };
@@ -330,6 +334,21 @@ const AdminProducts = () => {
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-blue"
                   placeholder="0.00"
                 />
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                <select
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-blue"
+                >
+                  <option value="">Sem categoria</option>
+                  {CATEGORY_OPTIONS.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
               </div>
 
               {/* Image URL */}

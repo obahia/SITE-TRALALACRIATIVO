@@ -82,9 +82,10 @@ const Header = () => {
           <nav className="hidden md:flex items-center gap-4">
             <Link to="/" className={getNavLinkStyle("/")}>Início</Link>
             <Link to="/produtos" className={getNavLinkStyle("/produtos")}>Produtos</Link>
-            <Link to="/sobre" className={getNavLinkStyle("/sobre")}>Sobre Nós</Link>
+            <Link to="/sobre" className={getNavLinkStyle("/sobre")}>Sobre Nos</Link>
+            <Link to="/localizacao" className={getNavLinkStyle("/localizacao")}>Localizacao</Link>
 
-            {/* Botão Carrinho */}
+            {/* Botao Carrinho */}
             <button
               onClick={() => setIsCartOpen(true)}
               className="relative p-2 hover:bg-gray-100 rounded-full transition cursor-pointer ml-1 text-brand-dark group"
@@ -101,19 +102,15 @@ const Header = () => {
             {user ? (
               // SE ESTIVER LOGADO
               <div className="flex items-center gap-2 ml-4 pl-4 border-l border-gray-200">
-                <div className="flex items-center gap-2 text-sm font-bold text-brand-blue">
-                  <User size={18} />
-                  {/* AQUI MOSTRAMOS O NOME VINDO DO BANCO */}
-                  <span className="max-w-[120px] truncate capitalize">
-                    {nomeExibicao || 'Carregando...'}
-                  </span>
-                </div>
                 <Link
                   to="/perfil"
                   title="Meu Perfil"
-                  className="p-2 text-gray-400 hover:text-brand-blue hover:bg-brand-blue/10 rounded-full transition-colors cursor-pointer"
+                  className="flex items-center gap-2 text-sm font-bold text-brand-blue hover:bg-brand-blue/10 px-3 py-2 rounded-lg transition-colors cursor-pointer"
                 >
                   <User size={18} />
+                  <span className="max-w-[120px] truncate capitalize">
+                    {nomeExibicao || 'Carregando...'}
+                  </span>
                 </Link>
                 <button
                   onClick={logout}
@@ -208,7 +205,8 @@ const Header = () => {
                   <nav className="flex flex-col gap-2 mt-2">
                     <Link to="/" onClick={() => setIsMenuOpen(false)} className={`block ${getNavLinkStyle("/")}`}>Início</Link>
                     <Link to="/produtos" onClick={() => setIsMenuOpen(false)} className={`block ${getNavLinkStyle("/produtos")}`}>Produtos</Link>
-                    <Link to="/sobre" onClick={() => setIsMenuOpen(false)} className={`block ${getNavLinkStyle("/sobre")}`}>Sobre Nós</Link>
+                    <Link to="/sobre" onClick={() => setIsMenuOpen(false)} className={`block ${getNavLinkStyle("/sobre")}`}>Sobre Nos</Link>
+                    <Link to="/localizacao" onClick={() => setIsMenuOpen(false)} className={`block ${getNavLinkStyle("/localizacao")}`}>Localizacao</Link>
                     {user && (
                       <Link to="/perfil" onClick={() => setIsMenuOpen(false)} className={`block ${getNavLinkStyle("/perfil")}`}>Meu Perfil</Link>
                     )}

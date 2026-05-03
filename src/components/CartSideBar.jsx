@@ -14,7 +14,9 @@ const CartSidebar = () => {
     updateQuantity,
     cartTotal,
     startStripeCheckout,
-    checkoutLoading
+    checkoutLoading,
+    checkoutError,
+    clearCheckoutError
   } = useCart();
 
   return (
@@ -134,6 +136,14 @@ const CartSidebar = () => {
             {/* Rodapé Total */}
             {cartItems.length > 0 && (
               <div className="p-6 border-t border-gray-100 bg-white">
+                {checkoutError && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex justify-between items-center">
+                    <span>{checkoutError}</span>
+                    <button type="button" onClick={clearCheckoutError} className="text-red-400 hover:text-red-600 ml-2 cursor-pointer">
+                      <X size={16} />
+                    </button>
+                  </div>
+                )}
                 <div className="flex justify-between items-center mb-6">
                   <span className="text-gray-500 font-medium">Subtotal</span>
                   <span className="text-3xl font-black text-gray-900">{formatPriceSimple(cartTotal)}</span>

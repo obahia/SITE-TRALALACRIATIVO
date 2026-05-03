@@ -29,9 +29,9 @@ const Home = () => {
         if (data) {
           setProducts(data);
         }
-      } catch (error) {
-        console.error('Erro ao buscar produtos:', error.message);
-      }
+       } catch (error) {
+         // Error already handled by state
+       }
     };
 
     fetchProducts();

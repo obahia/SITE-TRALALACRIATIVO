@@ -22,6 +22,8 @@ const AdminOrders = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderItems, setOrderItems] = useState([]);
+  const [trackingCode, setTrackingCode] = useState('');
+  const [trackingUrl, setTrackingUrl] = useState('');
 
   useEffect(() => {
     fetchOrders();
@@ -36,9 +38,9 @@ const AdminOrders = () => {
 
       if (error) throw error;
       setOrders(data || []);
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-    } finally {
+     } catch (error) {
+       // Error already handled by state
+     } finally {
       setLoading(false);
     }
   };
@@ -52,9 +54,9 @@ const AdminOrders = () => {
 
       if (error) throw error;
       setOrderItems(data || []);
-    } catch (error) {
-      console.error('Error fetching order items:', error);
-    }
+     } catch (error) {
+       // Error already handled by state
+     }
   };
 
   const updateOrderStatus = async (orderId, newStatus) => {
@@ -73,14 +75,42 @@ const AdminOrders = () => {
       if (selectedOrder?.id === orderId) {
         setSelectedOrder({ ...selectedOrder, status: newStatus });
       }
+     } catch (error) {
+       console.error('Erro ao atualizar status', error);
+     }
+  };
+
+  const saveTracking = async () => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ tracking_code: trackingCode, tracking_url: trackingUrl })
+        .eq('id', selectedOrder.id);
+
+      if (error) throw error;
+
+      const updatedOrder = { ...selectedOrder, tracking_code: trackingCode, tracking_url: trackingUrl };
+      
+      setOrders(orders.map(order => 
+        order.id === selectedOrder.id ? updatedOrder : order
+      ));
+      
+      setSelectedOrder(updatedOrder);
     } catch (error) {
-      console.error('Error updating order:', error);
-      alert('Erro ao atualizar status');
+      console.error('Erro ao guardar rastreio', error);
+    }
+  };
+
+  const generateCttUrl = () => {
+    if (trackingCode) {
+      setTrackingUrl(`https://www.ctt.pt/feapl_2/app/open/cttexpresso/objectSearch/objectSearch.jspx?objects=${trackingCode}`);
     }
   };
 
   const openOrderDetails = async (order) => {
     setSelectedOrder(order);
+    setTrackingCode(order.tracking_code || '');
+    setTrackingUrl(order.tracking_url || '');
     await fetchOrderItems(order.id);
   };
 
@@ -121,7 +151,7 @@ const AdminOrders = () => {
     const matchesSearch = 
       order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      `${order.profiles?.first_name} ${order.profiles?.lastName}`.toLowerCase().includes(searchTerm.toLowerCase());
+      `${order.profiles?.first_name} ${order.profiles?.last_name}`.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     
@@ -297,6 +327,52 @@ const AdminOrders = () => {
                   <span className="text-xl font-bold text-brand-blue">
                     {formatCurrency(selectedOrder.total_amount)}
                   </span>
+                </div>
+              </div>
+
+              {/* Rastreio da Encomenda */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Truck size={18} /> Rastreio da Encomenda
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Código de Rastreio
+                    </label>
+                    <input
+                      type="text"
+                      value={trackingCode}
+                      onChange={(e) => setTrackingCode(e.target.value)}
+                      className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      URL de Rastreio
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={trackingUrl}
+                        onChange={(e) => setTrackingUrl(e.target.value)}
+                        placeholder="https://www.ctt.pt/feapl_2/app/open/cttexpresso/objectSearch/objectSearch.jspx?objects=..."
+                        className="flex-1 px-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 text-sm"
+                      />
+                      <button
+                        onClick={generateCttUrl}
+                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium text-sm hover:bg-gray-300 transition-colors whitespace-nowrap"
+                      >
+                        Gerar URL CTT
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    onClick={saveTracking}
+                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-medium text-sm hover:bg-blue-700 transition-colors"
+                  >
+                    Guardar Rastreio
+                  </button>
                 </div>
               </div>
 

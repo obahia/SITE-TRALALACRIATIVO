@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
-  // ✅ NOVA FUNÇÃO: Login com Google
+  // Login com Google
   const signInWithGoogle = async () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -60,7 +60,7 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
-  // ✅ NOVA FUNÇÃO: Reset Password
+  // Reset Password
   const resetPassword = async (email) => {
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin

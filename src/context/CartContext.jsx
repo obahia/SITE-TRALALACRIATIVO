@@ -101,11 +101,12 @@ export const CartProvider = ({ children }) => {
         // Carregar do localStorage quando não logado
         const savedCart = localStorage.getItem(CART_STORAGE_KEY);
         if (savedCart) {
-          try {
-            setCartItems(JSON.parse(savedCart));
-          } catch {
-            setCartItems([]);
-          }
+           try {
+             setCartItems(JSON.parse(savedCart));
+           } catch {
+             // Parse error - fallback to empty cart
+             setCartItems([]);
+           }
         } else {
           setCartItems([]);
         }
@@ -236,6 +237,7 @@ export const CartProvider = ({ children }) => {
   }, [cartItems]);
 
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
 
   // 6. INICIAR CHECKOUT COM STRIPE
   const { setIsLoginModalOpen } = useAuth();
@@ -249,62 +251,41 @@ export const CartProvider = ({ children }) => {
     if (cartItems.length === 0) return;
 
     setCheckoutLoading(true);
+    setCheckoutError('');
     try {
-      // 6.1 Criar o Pedido no Supabase (Status Pendente)
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          user_id: user.id,
-          total_amount: cartTotal,
-          status: 'pendente'
-        })
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      // 6.2 Criar os Itens do Pedido (Snapshot)
-      const orderItemsData = cartItems.map(item => ({
-        order_id: order.id,
+      // Enviar apenas product_id, quantity e customization — precos sao calculados no servidor
+      const checkoutItems = cartItems.map(item => ({
         product_id: item.id,
-        name: item.name,
-        price: item.price,
         quantity: item.quantity,
-        customization: item.customization
+        customization: item.customization || null,
       }));
 
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItemsData);
-
-      if (itemsError) throw itemsError;
-
-      // 6.3 Chamar Edge Function do Supabase para criar Sessão do Stripe
+      // Edge function cria o pedido + itens + sessao Stripe (tudo server-side)
       const { data, error: functionError } = await supabase.functions.invoke('create-checkout-session', {
         body: {
-          orderId: order.id,
-          cartItems: cartItems,
-          successUrl: `${window.location.origin}/sucesso?orderId=${order.id}`,
+          cartItems: checkoutItems,
+          successUrl: `${window.location.origin}/sucesso`,
           cancelUrl: `${window.location.origin}/cancelado`,
         }
       });
 
       if (functionError) throw functionError;
 
-      // 6.4 Redirecionar para o Stripe
+      // Redirecionar para o Stripe
       if (data?.url) {
         window.location.href = data.url;
       } else {
-        throw new Error('Não foi possível gerar a sessão de pagamento.');
+        throw new Error('Nao foi possivel gerar a sessao de pagamento.');
       }
 
-    } catch (err) {
-      console.error('Erro no checkout:', err);
-      alert('Erro ao processar checkout. Tente novamente.');
-    } finally {
+     } catch (err) {
+       setCheckoutError('Erro ao processar pagamento. Por favor, tente novamente.');
+     } finally {
       setCheckoutLoading(false);
     }
   };
+
+  const clearCheckoutError = useCallback(() => setCheckoutError(''), []);
 
   return (
     <CartContext.Provider value={{
@@ -315,6 +296,8 @@ export const CartProvider = ({ children }) => {
       clearCart,
       startStripeCheckout,
       checkoutLoading,
+      checkoutError,
+      clearCheckoutError,
       cartTotal,
       cartCount,
       isCartOpen,

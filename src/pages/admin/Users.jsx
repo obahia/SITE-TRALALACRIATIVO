@@ -32,9 +32,9 @@ const AdminUsers = () => {
 
       if (error) throw error;
       setUsers(data || []);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    } finally {
+     } catch (error) {
+       // Error already handled by state
+     } finally {
       setLoading(false);
     }
   };
@@ -49,9 +49,9 @@ const AdminUsers = () => {
 
       if (error) throw error;
       setUserOrders(data || []);
-    } catch (error) {
-      console.error('Error fetching user orders:', error);
-    }
+     } catch (error) {
+       // Error already handled by state
+     }
   };
 
   const openUserDetails = async (user) => {

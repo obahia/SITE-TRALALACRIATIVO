@@ -3,6 +3,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { AuthProvider } from './context/AuthContext';
+import ErrorBoundary from './components/ErrorBoundary';
 import Header from './components/Header';
 import Footer from './components/Footer';
 // --- IMPORTANTE: O Carrinho ---
@@ -12,11 +13,12 @@ import Home from './pages/home';
 import Produtos from './pages/produtos';
 import Sobre from './pages/Sobre';
 import ProdutoDetalhe from './pages/produtodetalhe';
-import Perfil from './pages/perfil';
+import NotFound from './pages/NotFound';
 
 import Sucesso from './pages/sucesso';
 import Cancelado from './pages/cancelado';
-import Profile from './pages/Profile';
+import Perfil from './pages/perfil';
+import Localizacao from './pages/localizacao';
 import ProtectedRoute from './components/ProtectedRoute';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 import AdminLayout from './components/AdminLayout';
@@ -34,8 +36,8 @@ const AnimatedRoutes = () => {
         <Route path="/" element={<Home />} />
         <Route path="/produtos" element={<Produtos />} />
         <Route path="/sobre" element={<Sobre />} />
+        <Route path="/localizacao" element={<Localizacao />} />
         <Route path="/produto/:id" element={<ProdutoDetalhe />} />
-        <Route path="/perfil" element={<Perfil />} />
         <Route path="/sucesso" element={<Sucesso />} />
         <Route path="/cancelado" element={<Cancelado />} />
 
@@ -44,7 +46,7 @@ const AnimatedRoutes = () => {
           path="/perfil"
           element={
             <ProtectedRoute>
-              <Profile />
+              <Perfil />
             </ProtectedRoute>
           }
         />
@@ -90,6 +92,9 @@ const AnimatedRoutes = () => {
             </ProtectedAdminRoute>
           }
         />
+
+        {/* Catch-all 404 route */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </AnimatePresence>
   );
@@ -99,22 +104,24 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        {/* 1. O CartProvider envolve TUDO dentro do Router */}
-        {/* Assim, o Header sabe a quantidade e a página de Detalhe consegue adicionar itens */}
-        <CartProvider>
+        <ErrorBoundary>
+          {/* 1. O CartProvider envolve TUDO dentro do Router */}
+          {/* Assim, o Header sabe a quantidade e a página de Detalhe consegue adicionar itens */}
+          <CartProvider>
 
-          <Header />
+            <Header />
 
-          {/* 2. A Gaveta do Carrinho fica aqui (escondida até clicar) */}
-          <CartSidebar />
+            {/* 2. A Gaveta do Carrinho fica aqui (escondida até clicar) */}
+            <CartSidebar />
 
-          <main className="flex-grow">
-            <AnimatedRoutes />
-          </main>
+            <main className="flex-grow">
+              <AnimatedRoutes />
+            </main>
 
-          <Footer />
+            <Footer />
 
-        </CartProvider>
+          </CartProvider>
+        </ErrorBoundary>
       </AuthProvider>
     </BrowserRouter>
   );

@@ -19,12 +19,12 @@ const ProtectedAdminRoute = ({ children }) => {
 
       try {
         const { data } = await supabase
-          .from('admin_users')
-          .select('id')
+          .from('profiles')
+          .select('role')
           .eq('id', user.id)
           .single();
 
-        setIsAdmin(!!data);
+        setIsAdmin(data?.role === 'admin');
       } catch (_error) {
         setIsAdmin(false);
       } finally {

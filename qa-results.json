@@ -1,0 +1,60 @@
+{
+  "testResults": [
+    {
+      "test": "Homepage loads with products",
+      "status": "PASS",
+      "details": "Title: \"Tralalá Criativo | Presentes Personalizados\", Has hero: true, Products visible: false"
+    },
+    {
+      "test": "Navigation to catalog",
+      "status": "PASS",
+      "details": "Navigated to: http://localhost:5174/produtos"
+    },
+    {
+      "test": "Catalog page with filters and search",
+      "status": "FAIL",
+      "details": "Products: 0, Has search: true, Has filters: false"
+    },
+    {
+      "test": "Product detail page",
+      "status": "FAIL",
+      "details": "No products found to click"
+    },
+    {
+      "test": "Add to cart functionality",
+      "status": "FAIL",
+      "details": "Add to cart button not found"
+    },
+    {
+      "test": "Cart page",
+      "status": "FAIL",
+      "details": "Cart link not found"
+    },
+    {
+      "test": "Mobile responsive design",
+      "status": "PASS",
+      "details": "Mobile menu burger: false"
+    },
+    {
+      "test": "Admin page accessibility",
+      "status": "PASS",
+      "details": "Has login form: false, Has content: true"
+    },
+    {
+      "test": "404 page",
+      "status": "PASS",
+      "details": "Has 404 indicator: true"
+    },
+    {
+      "test": "Visual consistency",
+      "status": "PASS",
+      "details": "Broken images: 0/11, Console errors: 2"
+    }
+  ],
+  "summary": {
+    "total": 10,
+    "passed": 6,
+    "failed": 4,
+    "partial": 0
+  }
+}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, User, Phone, MapPin, Lock, Save, Loader2, Package, ChevronDown, ChevronUp } from 'lucide-react';
+import { Mail, User, Phone, MapPin, Lock, Save, Loader2, Package, ChevronDown, ChevronUp, Eye, EyeOff, Truck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase';
 
@@ -33,18 +33,21 @@ const Perfil = () => {
     confirmPassword: '',
   });
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const [errors, setErrors] = useState({});
+
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [expandedOrders, setExpandedOrders] = useState({});
 
-  // Proteção de rota - redireciona se não logado
   useEffect(() => {
     if (!user) {
       navigate('/');
     }
   }, [user, navigate]);
 
-  // Carrega dados do perfil ao montar
   useEffect(() => {
     const loadProfile = async () => {
       if (!user) return;
@@ -71,12 +74,12 @@ const Perfil = () => {
             street: data.street || '',
             city: data.city || '',
             postal_code: data.postal_code || '',
-            country: data.country || '',
+            country: data.country || 'Portugal',
           });
         }
-      } catch (err) {
-        console.error('Erro ao carregar perfil:', err);
-      } finally {
+       } catch (err) {
+         // Error already handled by state
+       } finally {
         setLoading(false);
       }
     };
@@ -84,7 +87,6 @@ const Perfil = () => {
     loadProfile();
   }, [user]);
 
-  // Carrega histórico de encomendas
   useEffect(() => {
     const loadOrders = async () => {
       if (!user) return;
@@ -100,10 +102,9 @@ const Perfil = () => {
         if (error) throw error;
 
         setOrders(data || []);
-      } catch (err) {
-        console.error('Erro ao carregar encomendas:', err);
-        setOrders([]);
-      } finally {
+       } catch (err) {
+         setOrders([]);
+       } finally {
         setOrdersLoading(false);
       }
     };
@@ -111,9 +112,63 @@ const Perfil = () => {
     loadOrders();
   }, [user]);
 
-  // Salva dados pessoais
+  const validateName = (name) => {
+    if (!name || name.trim().length < 2) return false;
+    return /^[^0-9]+$/.test(name);
+  };
+
+  const validatePhone = (phone) => {
+    if (!phone) return true;
+    const cleanPhone = phone.replace(/\s+/g, '');
+    return /^(?:\+351)?9[1236]\d{7}$/.test(cleanPhone);
+  };
+
+  const validatePostalCode = (postalCode) => {
+    if (!postalCode) return true;
+    return /^\d{4}-\d{3}$/.test(postalCode);
+  };
+
+  const getPasswordStrength = (pass) => {
+    if (!pass) return { score: 0, text: '', color: 'bg-gray-200', width: 'w-0' };
+    let score = 0;
+    if (pass.length >= 8) score += 1;
+    if (/[A-Z]/.test(pass)) score += 1;
+    if (/[0-9]/.test(pass)) score += 1;
+    
+    if (score === 1) return { score, text: 'Fraca', color: 'bg-red-500', width: 'w-1/3' };
+    if (score === 2) return { score, text: 'Média', color: 'bg-yellow-500', width: 'w-2/3' };
+    if (score === 3) return { score, text: 'Forte', color: 'bg-green-500', width: 'w-full' };
+    return { score: 0, text: '', color: 'bg-gray-200', width: 'w-0' };
+  };
+
+  const formatCurrency = (amount) => {
+    if (amount === undefined || amount === null) return '0,00 €';
+    return new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(amount);
+  };
+
   const handleSavePersonalData = async (e) => {
     e.preventDefault();
+    
+    const newErrors = { ...errors };
+    let hasError = false;
+
+    if (!validateName(personalData.first_name)) {
+      newErrors.first_name = 'Nome inválido. Mínimo 2 caracteres, sem números.';
+      hasError = true;
+    } else {
+      delete newErrors.first_name;
+    }
+
+    if (!validateName(personalData.last_name)) {
+      newErrors.last_name = 'Apelido inválido. Mínimo 2 caracteres, sem números.';
+      hasError = true;
+    } else {
+      delete newErrors.last_name;
+    }
+
+    setErrors(newErrors);
+    if (hasError) return;
+
     setSaveLoading(true);
     setMessage({ type: '', text: '' });
 
@@ -128,17 +183,37 @@ const Perfil = () => {
 
       if (error) throw error;
 
-      setMessage({ type: 'success', text: 'Dados pessoais atualizados com sucesso! ✨' });
+      setMessage({ type: 'success', text: 'Dados pessoais atualizados com sucesso' });
     } catch (err) {
-      setMessage({ type: 'error', text: err.message || 'Erro ao salvar dados pessoais' });
+      setMessage({ type: 'error', text: err.message || 'Erro ao guardar dados pessoais' });
     } finally {
       setSaveLoading(false);
     }
   };
 
-  // Salva endereço
   const handleSaveAddress = async (e) => {
     e.preventDefault();
+    
+    const newErrors = { ...errors };
+    let hasError = false;
+
+    if (!validatePhone(addressData.phone)) {
+      newErrors.phone = 'Telefone inválido. Formato: 9XXXXXXXX ou +3519XXXXXXXX';
+      hasError = true;
+    } else {
+      delete newErrors.phone;
+    }
+
+    if (!validatePostalCode(addressData.postal_code)) {
+      newErrors.postal_code = 'Código postal inválido. Formato: XXXX-XXX';
+      hasError = true;
+    } else {
+      delete newErrors.postal_code;
+    }
+
+    setErrors(newErrors);
+    if (hasError) return;
+
     setSaveLoading(true);
     setMessage({ type: '', text: '' });
 
@@ -150,66 +225,76 @@ const Perfil = () => {
           street: addressData.street,
           city: addressData.city,
           postal_code: addressData.postal_code,
-          country: addressData.country,
+          country: addressData.country || 'Portugal',
         })
         .eq('id', user.id);
 
       if (error) {
-        // Se falhar por erro de coluna, mostra mensagem específica
         if (error.message.includes('column')) {
           setMessage({ 
             type: 'warning', 
-            text: 'Funcionalidade de endereço em breve disponível 🚧' 
+            text: 'Funcionalidade de morada em breve disponível' 
           });
         } else {
           throw error;
         }
       } else {
-        setMessage({ type: 'success', text: 'Endereço atualizado com sucesso! 📍' });
+        setMessage({ type: 'success', text: 'Morada atualizada com sucesso' });
       }
     } catch (err) {
-      setMessage({ type: 'error', text: err.message || 'Erro ao salvar endereço' });
+      setMessage({ type: 'error', text: err.message || 'Erro ao guardar morada' });
     } finally {
       setSaveLoading(false);
     }
   };
 
-  // Altera senha
   const handleChangePassword = async (e) => {
     e.preventDefault();
+    
+    const newErrors = { ...errors };
+    let hasError = false;
+
+    const pass = passwordData.newPassword;
+    if (pass.length < 8 || !/[A-Z]/.test(pass) || !/[0-9]/.test(pass)) {
+      newErrors.newPassword = 'A palavra-passe deve ter no mínimo 8 caracteres, 1 maiúscula e 1 número.';
+      hasError = true;
+    } else {
+      delete newErrors.newPassword;
+    }
+
+    if (pass !== passwordData.confirmPassword) {
+      newErrors.confirmPassword = 'As palavras-passe não coincidem.';
+      hasError = true;
+    } else {
+      delete newErrors.confirmPassword;
+    }
+
+    setErrors(newErrors);
+    if (hasError) return;
+
     setPasswordLoading(true);
     setMessage({ type: '', text: '' });
 
     try {
-      if (passwordData.newPassword !== passwordData.confirmPassword) {
-        throw new Error('As senhas não coincidem');
-      }
-
-      if (passwordData.newPassword.length < 6) {
-        throw new Error('A senha deve ter no mínimo 6 caracteres');
-      }
-
       const { error } = await supabase.auth.updateUser({
         password: passwordData.newPassword,
       });
 
       if (error) throw error;
 
-      setMessage({ type: 'success', text: 'Senha alterada com sucesso! 🔒' });
+      setMessage({ type: 'success', text: 'Palavra-passe alterada com sucesso' });
       setPasswordData({ newPassword: '', confirmPassword: '' });
     } catch (err) {
-      setMessage({ type: 'error', text: err.message || 'Erro ao alterar senha' });
+      setMessage({ type: 'error', text: err.message || 'Erro ao alterar palavra-passe' });
     } finally {
       setPasswordLoading(false);
     }
   };
 
-  // Formatar data
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('pt-PT');
   };
 
-  // Toggle expandir encomenda
   const toggleOrderExpansion = (orderId) => {
     setExpandedOrders(prev => ({
       ...prev,
@@ -217,7 +302,6 @@ const Perfil = () => {
     }));
   };
 
-  // Badge de status
   const StatusBadge = ({ status }) => {
     const statusConfig = {
       pendente: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Pendente' },
@@ -237,6 +321,8 @@ const Perfil = () => {
 
   if (!user) return null;
 
+  const pwdStrength = getPasswordStrength(passwordData.newPassword);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -249,9 +335,9 @@ const Perfil = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-2">
-            Meu Perfil
+            O Meu Perfil
           </h1>
-          <p className="text-gray-500">Gerencie as suas informações pessoais</p>
+          <p className="text-gray-500">Faça a gestão das suas informações pessoais</p>
         </div>
 
         {/* Mensagem de Feedback */}
@@ -286,63 +372,85 @@ const Perfil = () => {
           <form onSubmit={handleSavePersonalData} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Nome */}
-              <div className="relative">
-                <User className="absolute left-4 top-3.5 text-gray-400" size={18} />
-                <input
-                  type="text"
-                  placeholder="Nome"
-                  className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all"
-                  value={personalData.first_name}
-                  onChange={(e) =>
-                    setPersonalData({ ...personalData, first_name: e.target.value })
-                  }
-                  required
-                />
+              <div className="flex flex-col">
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="first_name">
+                  Nome
+                </label>
+                <div className="relative">
+                  <User className="absolute left-4 top-3.5 text-gray-400" size={18} />
+                  <input
+                    id="first_name"
+                    type="text"
+                    placeholder="Nome"
+                    className={`w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 border ${errors.first_name ? 'border-red-500' : 'border-gray-200'} focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all`}
+                    value={personalData.first_name}
+                    onChange={(e) => {
+                      setPersonalData({ ...personalData, first_name: e.target.value });
+                      if (errors.first_name) setErrors({...errors, first_name: null});
+                    }}
+                    required
+                  />
+                </div>
+                {errors.first_name && <p className="text-red-500 text-xs mt-1">{errors.first_name}</p>}
               </div>
 
-              {/* Sobrenome */}
-              <div className="relative">
-                <User className="absolute left-4 top-3.5 text-gray-400" size={18} />
-                <input
-                  type="text"
-                  placeholder="Sobrenome"
-                  className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all"
-                  value={personalData.last_name}
-                  onChange={(e) =>
-                    setPersonalData({ ...personalData, last_name: e.target.value })
-                  }
-                  required
-                />
+              {/* Apelido */}
+              <div className="flex flex-col">
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="last_name">
+                  Apelido
+                </label>
+                <div className="relative">
+                  <User className="absolute left-4 top-3.5 text-gray-400" size={18} />
+                  <input
+                    id="last_name"
+                    type="text"
+                    placeholder="Apelido"
+                    className={`w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 border ${errors.last_name ? 'border-red-500' : 'border-gray-200'} focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all`}
+                    value={personalData.last_name}
+                    onChange={(e) => {
+                      setPersonalData({ ...personalData, last_name: e.target.value });
+                      if (errors.last_name) setErrors({...errors, last_name: null});
+                    }}
+                    required
+                  />
+                </div>
+                {errors.last_name && <p className="text-red-500 text-xs mt-1">{errors.last_name}</p>}
               </div>
             </div>
 
             {/* Email (read-only) */}
-            <div className="relative">
-              <Mail className="absolute left-4 top-3.5 text-gray-400" size={18} />
-              <input
-                type="email"
-                placeholder="Email"
-                className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-100 border border-gray-200 outline-none cursor-not-allowed"
-                value={personalData.email}
-                disabled
-              />
-              <span className="absolute right-4 top-3.5 text-xs text-gray-400 font-medium">
-                Apenas leitura
-              </span>
+            <div className="flex flex-col">
+              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="email">
+                Email
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-3.5 text-gray-400" size={18} />
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="Email"
+                  className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-100 border border-gray-200 outline-none cursor-not-allowed"
+                  value={personalData.email}
+                  disabled
+                />
+                <span className="absolute right-4 top-3.5 text-xs text-gray-400 font-medium">
+                  Apenas leitura
+                </span>
+              </div>
             </div>
 
-            {/* Botão Salvar */}
+            {/* Botão Guardar */}
             <button
               type="submit"
               disabled={saveLoading}
-              className="w-full bg-gradient-to-r from-brand-blue to-brand-purple text-white font-bold py-3.5 rounded-xl shadow-md hover:brightness-110 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full mt-4 bg-gradient-to-r from-brand-blue to-brand-purple text-white font-bold py-3.5 rounded-xl shadow-md hover:brightness-110 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
             >
               {saveLoading ? (
                 <Loader2 className="animate-spin" size={20} />
               ) : (
                 <>
                   <Save size={18} />
-                  Salvar Dados Pessoais
+                  Guardar Dados Pessoais
                 </>
               )}
             </button>
@@ -363,89 +471,133 @@ const Perfil = () => {
 
           <form onSubmit={handleSaveAddress} className="space-y-4">
             {/* Telefone */}
-            <div className="relative">
-              <Phone className="absolute left-4 top-3.5 text-gray-400" size={18} />
-              <input
-                type="tel"
-                placeholder="Telefone"
-                className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all"
-                value={addressData.phone}
-                onChange={(e) =>
-                  setAddressData({ ...addressData, phone: e.target.value })
-                }
-              />
+            <div className="flex flex-col">
+              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="phone">
+                Telefone
+              </label>
+              <div className="relative">
+                <Phone className="absolute left-4 top-3.5 text-gray-400" size={18} />
+                <input
+                  id="phone"
+                  type="tel"
+                  placeholder="Telefone"
+                  className={`w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 border ${errors.phone ? 'border-red-500' : 'border-gray-200'} focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all`}
+                  value={addressData.phone}
+                  onChange={(e) => {
+                    setAddressData({ ...addressData, phone: e.target.value });
+                    if (errors.phone) setErrors({...errors, phone: null});
+                  }}
+                  onBlur={(e) => {
+                    if (e.target.value && !validatePhone(e.target.value)) {
+                      setErrors({...errors, phone: 'Telefone inválido. Formato: 9XXXXXXXX ou +3519XXXXXXXX'});
+                    }
+                  }}
+                />
+              </div>
+              {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
             </div>
 
-            {/* Rua */}
-            <div className="relative">
-              <MapPin className="absolute left-4 top-3.5 text-gray-400" size={18} />
-              <input
-                type="text"
-                placeholder="Rua e Número"
-                className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all"
-                value={addressData.street}
-                onChange={(e) =>
-                  setAddressData({ ...addressData, street: e.target.value })
-                }
-              />
+            {/* Morada */}
+            <div className="flex flex-col">
+              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="street">
+                Morada
+              </label>
+              <div className="relative">
+                <MapPin className="absolute left-4 top-3.5 text-gray-400" size={18} />
+                <input
+                  id="street"
+                  type="text"
+                  placeholder="Morada"
+                  className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all"
+                  value={addressData.street}
+                  onChange={(e) =>
+                    setAddressData({ ...addressData, street: e.target.value })
+                  }
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Cidade */}
-              <div className="relative">
-                <MapPin className="absolute left-4 top-3.5 text-gray-400" size={18} />
-                <input
-                  type="text"
-                  placeholder="Cidade"
-                  className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all"
-                  value={addressData.city}
-                  onChange={(e) =>
-                    setAddressData({ ...addressData, city: e.target.value })
-                  }
-                />
+              <div className="flex flex-col">
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="city">
+                  Cidade
+                </label>
+                <div className="relative">
+                  <MapPin className="absolute left-4 top-3.5 text-gray-400" size={18} />
+                  <input
+                    id="city"
+                    type="text"
+                    placeholder="Cidade"
+                    className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all"
+                    value={addressData.city}
+                    onChange={(e) =>
+                      setAddressData({ ...addressData, city: e.target.value })
+                    }
+                  />
+                </div>
               </div>
 
               {/* Código Postal */}
-              <div className="relative">
-                <MapPin className="absolute left-4 top-3.5 text-gray-400" size={18} />
-                <input
-                  type="text"
-                  placeholder="Código Postal"
-                  className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all"
-                  value={addressData.postal_code}
-                  onChange={(e) =>
-                    setAddressData({ ...addressData, postal_code: e.target.value })
-                  }
-                />
+              <div className="flex flex-col">
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="postal_code">
+                  Código Postal
+                </label>
+                <div className="relative">
+                  <MapPin className="absolute left-4 top-3.5 text-gray-400" size={18} />
+                  <input
+                    id="postal_code"
+                    type="text"
+                    placeholder="Código Postal"
+                    className={`w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 border ${errors.postal_code ? 'border-red-500' : 'border-gray-200'} focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all`}
+                    value={addressData.postal_code}
+                    onChange={(e) => {
+                      setAddressData({ ...addressData, postal_code: e.target.value });
+                      if (errors.postal_code) setErrors({...errors, postal_code: null});
+                    }}
+                    onBlur={(e) => {
+                      if (e.target.value && !validatePostalCode(e.target.value)) {
+                        setErrors({...errors, postal_code: 'Código postal inválido. Formato: XXXX-XXX'});
+                      }
+                    }}
+                  />
+                </div>
+                {errors.postal_code && <p className="text-red-500 text-xs mt-1">{errors.postal_code}</p>}
               </div>
             </div>
 
             {/* País */}
-            <div className="relative">
-              <MapPin className="absolute left-4 top-3.5 text-gray-400" size={18} />
-              <input
-                type="text"
-                placeholder="País"
-                className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all"
-                value={addressData.country}
-                onChange={(e) =>
-                  setAddressData({ ...addressData, country: e.target.value })
-                }
-              />
+            <div className="flex flex-col">
+              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="country">
+                País
+              </label>
+              <div className="relative">
+                <MapPin className="absolute left-4 top-3.5 text-gray-400" size={18} />
+                <input
+                  id="country"
+                  type="text"
+                  placeholder="País"
+                  className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all"
+                  value={addressData.country}
+                  onChange={(e) =>
+                    setAddressData({ ...addressData, country: e.target.value })
+                  }
+                />
+              </div>
             </div>
 
-            {/* Botão Salvar */}
+            {/* Botão Guardar */}
             <button
               type="submit"
               disabled={saveLoading}
-              className="w-full bg-gradient-to-r from-brand-blue to-brand-purple text-white font-bold py-3.5 rounded-xl shadow-md hover:brightness-110 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full mt-4 bg-gradient-to-r from-brand-blue to-brand-purple text-white font-bold py-3.5 rounded-xl shadow-md hover:brightness-110 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
             >
               {saveLoading ? (
                 <Loader2 className="animate-spin" size={20} />
               ) : (
                 <>
                   <Save size={18} />
-                  Salvar Endereço
+                  Guardar Endereço
                 </>
               )}
             </button>
@@ -461,52 +613,92 @@ const Perfil = () => {
         >
           <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
             <Lock className="text-brand-blue" size={24} />
-            Alterar Senha
+            Alterar Palavra-passe
           </h2>
 
           <form onSubmit={handleChangePassword} className="space-y-4">
-            {/* Nova Senha */}
-            <div className="relative">
-              <Lock className="absolute left-4 top-3.5 text-gray-400" size={18} />
-              <input
-                type="password"
-                placeholder="Nova Senha"
-                className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all"
-                value={passwordData.newPassword}
-                onChange={(e) =>
-                  setPasswordData({ ...passwordData, newPassword: e.target.value })
-                }
-                required
-              />
+            {/* Nova Palavra-passe */}
+            <div className="flex flex-col">
+              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="newPassword">
+                Nova Palavra-passe
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-3.5 text-gray-400" size={18} />
+                <input
+                  id="newPassword"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Nova Palavra-passe"
+                  className={`w-full pl-11 pr-12 py-3 rounded-xl bg-gray-50 border ${errors.newPassword ? 'border-red-500' : 'border-gray-200'} focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all`}
+                  value={passwordData.newPassword}
+                  onChange={(e) => {
+                    setPasswordData({ ...passwordData, newPassword: e.target.value });
+                    if (errors.newPassword) setErrors({...errors, newPassword: null});
+                  }}
+                  required
+                />
+                <button
+                  type="button"
+                  className="absolute right-4 top-3.5 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              {passwordData.newPassword && (
+                <div className="mt-2">
+                  <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full ${pwdStrength.color} transition-all duration-300 ${pwdStrength.width}`} 
+                    ></div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Força: {pwdStrength.text}</p>
+                </div>
+              )}
+              {errors.newPassword && <p className="text-red-500 text-xs mt-1">{errors.newPassword}</p>}
             </div>
 
-            {/* Confirmar Senha */}
-            <div className="relative">
-              <Lock className="absolute left-4 top-3.5 text-gray-400" size={18} />
-              <input
-                type="password"
-                placeholder="Confirmar Nova Senha"
-                className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all"
-                value={passwordData.confirmPassword}
-                onChange={(e) =>
-                  setPasswordData({ ...passwordData, confirmPassword: e.target.value })
-                }
-                required
-              />
+            {/* Confirmar Palavra-passe */}
+            <div className="flex flex-col">
+              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="confirmPassword">
+                Confirmar Palavra-passe
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-3.5 text-gray-400" size={18} />
+                <input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="Confirmar Palavra-passe"
+                  className={`w-full pl-11 pr-12 py-3 rounded-xl bg-gray-50 border ${errors.confirmPassword ? 'border-red-500' : 'border-gray-200'} focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all`}
+                  value={passwordData.confirmPassword}
+                  onChange={(e) => {
+                    setPasswordData({ ...passwordData, confirmPassword: e.target.value });
+                    if (errors.confirmPassword) setErrors({...errors, confirmPassword: null});
+                  }}
+                  required
+                />
+                <button
+                  type="button"
+                  className="absolute right-4 top-3.5 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
             </div>
 
             {/* Botão Alterar */}
             <button
               type="submit"
               disabled={passwordLoading}
-              className="w-full bg-gradient-to-r from-brand-pink to-brand-purple text-white font-bold py-3.5 rounded-xl shadow-md hover:brightness-110 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full mt-4 bg-gradient-to-r from-brand-pink to-brand-purple text-white font-bold py-3.5 rounded-xl shadow-md hover:brightness-110 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
             >
               {passwordLoading ? (
                 <Loader2 className="animate-spin" size={20} />
               ) : (
                 <>
                   <Lock size={18} />
-                  Alterar Senha
+                  Alterar Palavra-passe
                 </>
               )}
             </button>
@@ -532,7 +724,7 @@ const Perfil = () => {
           ) : orders.length === 0 ? (
             <div className="text-center py-12">
               <Package className="mx-auto text-gray-300 mb-4" size={48} />
-              <p className="text-gray-500 mb-4">Ainda não fizeste nenhuma encomenda</p>
+              <p className="text-gray-500 mb-4">Ainda não fez nenhuma encomenda</p>
               <Link
                 to="/produtos"
                 className="inline-block bg-gradient-to-r from-brand-blue to-brand-purple text-white font-bold px-6 py-3 rounded-xl shadow-md hover:brightness-110 transition-all cursor-pointer"
@@ -560,7 +752,7 @@ const Perfil = () => {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="font-bold text-gray-800">
-                        {order.total_amount?.toFixed(2)} €
+                        {formatCurrency(order.total_amount)}
                       </span>
                       {expandedOrders[order.id] ? (
                         <ChevronUp className="text-gray-400" size={20} />
@@ -600,15 +792,39 @@ const Perfil = () => {
                             </div>
                             <div className="text-right ml-4">
                               <p className="text-gray-600">
-                                {item.quantity}x {item.price?.toFixed(2)} €
+                                {item.quantity}x {formatCurrency(item.price)}
                               </p>
                               <p className="font-semibold text-gray-800">
-                                {(item.quantity * item.price)?.toFixed(2)} €
+                                {formatCurrency(item.quantity * item.price)}
                               </p>
                             </div>
                           </div>
                         ))}
                       </div>
+                      
+                      {order.tracking_code && (
+                        <div className="border-t border-gray-200 mt-4 pt-4">
+                          <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                            <h3 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                              <Truck className="text-brand-blue" size={20} />
+                              Rastreio da Encomenda
+                            </h3>
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                              <p className="text-gray-700">
+                                Código: <span className="font-mono bg-white px-2 py-1 rounded border border-gray-200">{order.tracking_code}</span>
+                              </p>
+                              <a
+                                href={order.tracking_url || `https://www.ctt.pt/feapl_2/app/open/cttexpresso/objectSearch/objectSearch.jspx?objects=${order.tracking_code}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-block bg-brand-blue text-white px-4 py-2 rounded-lg font-bold text-sm hover:brightness-110 transition-all text-center"
+                              >
+                                Acompanhar Encomenda
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </motion.div>
                   )}
                 </div>

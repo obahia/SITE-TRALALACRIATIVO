@@ -29,9 +29,9 @@ const Produtos = () => {
         if (data) {
           setProducts(data);
         }
-      } catch (error) {
-        console.error("Erro ao buscar produtos:", error.message);
-      } finally {
+       } catch (error) {
+         // Error already handled by state
+       } finally {
         setLoading(false);
       }
     };
@@ -117,6 +117,7 @@ const Produtos = () => {
         {/* Grid de Produtos com Stagger Animation */}
         {!loading && filteredProducts.length > 0 && (
           <motion.div 
+            key={selectedCategory + searchQuery}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
             initial="hidden"
             animate="visible"

@@ -1,7 +1,7 @@
 // src/pages/Sobre.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Heart, Star, Sparkles, Phone, Instagram, MapPin } from 'lucide-react';
+import { Heart, Star, Sparkles } from 'lucide-react';
 
 const Sobre = () => {
   return (
@@ -78,95 +78,6 @@ const Sobre = () => {
               </div>
             </div>
 
-          </div>
-        </div>
-      </div>
-
-      {/* --- SEÇÃO ONDE ESTAMOS --- */}
-      <div className="mt-12 bg-white/60 backdrop-blur-md rounded-[3rem] p-8 md:p-12 shadow-xl border border-white/50 relative overflow-hidden">
-        
-        {/* Decoração de Fundo */}
-        <div className="absolute top-0 left-0 -mt-10 -ml-10 w-40 h-40 bg-brand-blue/20 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-0 -mb-10 -mr-10 w-40 h-40 bg-brand-pink/20 rounded-full blur-3xl"></div>
-
-        <div className="relative z-10">
-          {/* Heading */}
-          <h2 className="text-sm font-bold text-brand-blue tracking-widest uppercase mb-2 flex items-center gap-2">
-            <MapPin size={16} /> Onde Estamos
-          </h2>
-          <h3 className="text-3xl md:text-4xl font-bold text-gray-800 mb-8">
-            Visite nosso ateliê
-          </h3>
-
-          {/* Grid: Map + Contact Info */}
-          <div className="grid md:grid-cols-2 gap-8">
-            
-            {/* Google Maps Embed */}
-            <div className="flex justify-center">
-              <iframe
-                src="https://maps.google.com/maps?q=Av.+Marquês+de+Pombal+226+Leiria+Portugal&output=embed"
-                width="100%"
-                height="300"
-                style={{ border: 0, borderRadius: '1rem' }}
-                allowFullScreen=""
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                className="shadow-lg rounded-2xl"
-              ></iframe>
-            </div>
-
-            {/* Contact Information */}
-            <div className="flex flex-col justify-center space-y-6">
-              
-              {/* Phone */}
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 mt-1">
-                  <Phone className="text-brand-blue" size={24} />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-brand-blue tracking-widest uppercase mb-1">Telefone</p>
-                  <a
-                    href="tel:+351961073787"
-                    className="text-lg text-gray-700 hover:text-brand-pink transition-colors cursor-pointer font-semibold"
-                  >
-                    961 073 787
-                  </a>
-                </div>
-              </div>
-
-              {/* Instagram */}
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 mt-1">
-                  <Instagram className="text-brand-blue" size={24} />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-brand-blue tracking-widest uppercase mb-1">Instagram</p>
-                  <a
-                    href="https://www.instagram.com/tralalacriativo.pt/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-lg text-gray-700 hover:text-brand-pink transition-colors cursor-pointer font-semibold"
-                  >
-                    @tralalacriativo.pt
-                  </a>
-                </div>
-              </div>
-
-              {/* Address */}
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 mt-1">
-                  <MapPin className="text-brand-blue" size={24} />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-brand-blue tracking-widest uppercase mb-1">Endereço</p>
-                  <p className="text-lg text-gray-700 font-semibold">
-                    Av. Marquês de Pombal, 226<br />
-                    Leiria, Portugal
-                  </p>
-                </div>
-              </div>
-
-            </div>
           </div>
         </div>
       </div>

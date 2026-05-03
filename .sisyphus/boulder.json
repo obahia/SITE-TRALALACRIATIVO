@@ -1,32 +1,50 @@
 {
-  "active_plan": "C:\\Users\\joaov\\Desktop\\SITE-TRALALACRIATIVO\\.sisyphus\\plans\\redesign-tralalacriativo.md",
-  "started_at": "2026-04-27T20:15:14.896Z",
+  "active_plan": "C:\\Users\\joaov\\Desktop\\SITE-TRALALACRIATIVO\\.sisyphus\\plans\\infraestrutura-ecommerce.md",
+  "started_at": "2026-05-03T18:56:18.238Z",
   "session_ids": [
-    "ses_22f8770ffffe1afPiItRfkA3XF"
+    "ses_210d71c19ffeB3Gg2SMYGD3ic8"
   ],
   "session_origins": {
-    "ses_22f8770ffffe1afPiItRfkA3XF": "direct"
+    "ses_210d71c19ffeB3Gg2SMYGD3ic8": "direct"
   },
-  "plan_name": "redesign-tralalacriativo",
+  "plan_name": "infraestrutura-ecommerce",
   "agent": "atlas",
   "task_sessions": {
     "todo:1": {
       "task_key": "todo:1",
       "task_label": "1",
-      "task_title": "Supabase Schema Changes — Foundation",
-      "session_id": "ses_22f491a3effezHgzlXjIm71Jlr",
+      "task_title": "Corrigir RLS Policies + Trigger de Perfil (SQL Migration)",
+      "session_id": "ses_210cc68b2ffeKx7FcGx1FS4T4M",
       "agent": "Sisyphus-Junior",
       "category": "quick",
-      "updated_at": "2026-04-27T20:53:07.167Z"
+      "updated_at": "2026-05-03T18:58:34.770Z"
     },
-    "todo:11": {
-      "task_key": "todo:11",
-      "task_label": "11",
-      "task_title": "Checkout + Envio — Portes Fixos por Categoria no Carrinho",
-      "session_id": "ses_22f34ff0fffeLY7A6I2YxQwVI4",
+    "todo:4": {
+      "task_key": "todo:4",
+      "task_label": "4",
+      "task_title": "Criar Edge Function stripe-webhook",
+      "session_id": "ses_210b81be6ffe6vSsKMjvyiCMXV",
       "agent": "Sisyphus-Junior",
       "category": "deep",
-      "updated_at": "2026-04-27T21:17:52.391Z"
+      "updated_at": "2026-05-03T19:22:29.037Z"
+    },
+    "todo:7": {
+      "task_key": "todo:7",
+      "task_label": "7",
+      "task_title": "Corrigir useProducts para Anônimos",
+      "session_id": "ses_210b3ca8dffeppSe63pzPfWDRl",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-03T19:24:52.992Z"
+    },
+    "todo:10": {
+      "task_key": "todo:10",
+      "task_label": "10",
+      "task_title": "Testes Automatizados — Checkout, Carrinho, Auth, Admin",
+      "session_id": "ses_210af7ca6ffeDb8wwf9rsefYme",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-05-03T19:37:40.393Z"
     }
   }
 }

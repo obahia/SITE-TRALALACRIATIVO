@@ -1,0 +1,144 @@
+TASK 6 COMPLETION SUMMARY
+=========================
+
+TASK: Corrigir Página /sucesso com Verificação de Pagamento
+STATUS: ✅ COMPLETED
+
+DELIVERABLES COMPLETED:
+========================
+
+1. ✅ Ficheiro modificado: src/pages/sucesso.jsx
+   - Original: 48 lines
+   - Updated: 180 lines
+   - Commit: 9081341 (fix(checkout): verificar pagamento na página de sucesso)
+
+2. ✅ Consulta status do pedido ao carregar
+   - Query: supabase.from('orders').select('status, user_id').eq('id', orderId).single()
+   - Executed in checkOrderStatus() async function
+   - Line 32-61 in updated file
+
+3. ✅ Se status === 'pago' → mostrar confirmação
+   - Green CheckCircle icon displayed
+   - "Pagamento Confirmado!" heading
+   - Order ID shown: #{orderId.slice(0, 8)}
+   - clearCart() called immediately
+   - Lines 133-165
+
+4. ✅ Se status === 'pendente' → polling (3s interval, max 30s)
+   - Polling interval: 3000ms (line 75)
+   - Polling timeout: 30000ms (line 69)
+   - Blue Loader icon during polling
+   - "A Verificar Pagamento" heading
+   - Lines 85-100
+
+5. ✅ Se orderId inválido ou não pertence ao user → redirect para /
+   - Check: if (!orderId || !user) { navigate('/'); } (line 22)
+   - Check: if (error || !order) { navigate('/'); } (line 40)
+   - Check: if (order.user_id !== user.id) { navigate('/'); } (line 46)
+   - Lines 20-48
+
+6. ✅ clearCart só chamado quando status === 'pago'
+   - Conditional: if (order.status === 'pago') { ... clearCart(); } (line 52-57)
+   - NOT called on 'pendente' status
+   - NOT called on validation failures
+
+7. ✅ Verificação: grep confirma query, polling, redirect logic
+   - Query confirmed: Line 32-35
+   - Polling confirmed: Lines 68-76
+   - Redirect logic confirmed: Lines 20-48
+   - clearCart logic confirmed: Lines 52-57
+
+8. ✅ Commit: fix(checkout): verificar pagamento na página de sucesso
+   - Commit hash: 9081341c95a7d870e51b119b6a2f6660fab1b6c4
+   - Author: João Bahia
+   - Date: Sun May 3 20:04:42 2026 +0100
+   - Files changed: 1 (src/pages/sucesso.jsx)
+   - Insertions: 160, Deletions: 33
+
+IMPLEMENTATION DETAILS:
+=======================
+
+Imports Added:
+- useNavigate from 'react-router-dom'
+- useAuth from '../context/AuthContext'
+- supabase from '../services/supabase'
+- Loader icon from 'lucide-react'
+
+State Variables:
+- orderStatus: null (tracks current order status)
+- loading: true (shows loading UI)
+- pollingTimeout: false (shows timeout UI after 30s)
+
+useEffect Logic:
+- Validates orderId and user existence
+- Calls checkOrderStatus() immediately
+- Sets up polling interval (3s)
+- Sets up timeout (30s)
+- Cleans up intervals/timeouts on unmount
+- Dependencies: [orderId, user, navigate, clearCart]
+
+UI States:
+1. Loading (loading === true):
+   - Blue Loader icon (animate-spin)
+   - "A Verificar Pagamento" heading
+   - "Estamos a confirmar o seu pagamento..." message
+   - No buttons
+
+2. Timeout (pollingTimeout === true):
+   - Yellow ShoppingBag icon
+   - "A Verificar Pagamento" heading
+   - "O seu pedido está a ser processado..." message
+   - "Continuar a Comprar" and "Voltar ao Início" buttons
+
+3. Success (orderStatus === 'pago'):
+   - Green CheckCircle icon
+   - "Pagamento Confirmado!" heading
+   - "Obrigado pela sua compra!..." message
+   - "Continuar a Comprar" and "Voltar ao Início" buttons
+
+SECURITY FEATURES:
+==================
+- User isolation: Verify order.user_id === user.id
+- Invalid order handling: Redirect to home page
+- Missing orderId handling: Redirect to home page
+- Unauthenticated access: Return null (no error shown)
+
+DESIGN PRESERVATION:
+====================
+- Same Tailwind classes used
+- Same icon components (CheckCircle, ShoppingBag, ArrowRight, Loader)
+- Same color scheme (green, yellow, blue)
+- Same layout (centered card, rounded corners)
+- Same button styles and spacing
+
+QA EVIDENCE:
+============
+- File: .sisyphus/evidence/task-6-qa-scenarios.txt
+- Contains: 7 detailed QA scenarios with expected outputs
+- Scenarios cover: valid order, pending order, webhook update, invalid orderId, order not found, wrong user, unauthenticated access
+
+NOTEPAD UPDATES:
+================
+- File: .sisyphus/notepads/infraestrutura-ecommerce/learnings.md
+- Added: Task 6 learnings section with key patterns and verification checklist
+- Includes: Payment verification flow, polling implementation, cart clearing logic, UI states, security considerations
+
+VERIFICATION CHECKLIST:
+=======================
+✅ Query logic: supabase.from('orders').select('status, user_id').eq('id', orderId).single()
+✅ Polling interval: 3000ms
+✅ Polling timeout: 30000ms
+✅ clearCart() only when status === 'pago'
+✅ Redirect for invalid orderId or wrong user
+✅ 3 UI states: loading, timeout, success
+✅ Cleanup: intervals and timeouts cleared on unmount
+✅ Design preserved: Same icons, layout, colors
+✅ Imports: useAuth, useNavigate, supabase, Loader icon
+✅ Dependencies: [orderId, user, navigate, clearCart]
+✅ Commit created with correct message
+✅ Evidence file created with QA scenarios
+✅ Notepad updated with learnings
+
+TASK COMPLETE ✅
+================
+All requirements met. File modified, logic implemented, verified, committed, and documented.

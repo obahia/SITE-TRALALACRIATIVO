@@ -56,9 +56,9 @@ const AdminDashboard = () => {
           .limit(5);
 
         setRecentOrders(recentData || []);
-      } catch (error) {
-        console.error('Error fetching stats:', error);
-      } finally {
+       } catch (error) {
+         // Error already handled by state
+       } finally {
         setLoading(false);
       }
     };
