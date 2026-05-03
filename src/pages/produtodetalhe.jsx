@@ -1,24 +1,27 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '../services/supabase'; // Importe o supabase
+import { supabase } from '../services/supabase';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import { uploadCustomizationImage } from '../services/storage';
+import LoginModal from '../components/LoginModal';
 import { Minus, Plus, Upload, ArrowLeft, X, Check, ShieldCheck, MessageSquare, Edit3, ImageIcon, Loader2 } from 'lucide-react';
 
 const ProdutoDetalhe = () => {
-    const { id } = useParams(); // Pega o ID da URL (ex: /produto/1)
+    const { id } = useParams();
     const navigate = useNavigate();
     const { addToCart } = useCart();
+    const { user, isLoginModalOpen, setIsLoginModalOpen } = useAuth();
 
-    // Estado para guardar o produto que veio do banco
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Estados do formulário
     const [quantity, setQuantity] = useState(1);
     const [selectedOption, setSelectedOption] = useState(null);
     const [uploadedImage, setUploadedImage] = useState(null);
     const [instructions, setInstructions] = useState('');
+    const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef(null);
 
     // --- 1. BUSCAR PRODUTO NO SUPABASE ---
@@ -31,9 +34,8 @@ const ProdutoDetalhe = () => {
                 .eq('id', id)
                 .single(); // Pega apenas um
 
-            if (error || !data) {
-                console.error("Produto não encontrado", error);
-                navigate('/produtos'); // Volta se der erro
+             if (error || !data) {
+                 navigate('/produtos'); // Volta se der erro
             } else {
                 setProduct(data);
                 // Define a primeira opção como padrão se existir
@@ -47,13 +49,30 @@ const ProdutoDetalhe = () => {
         fetchProduct();
     }, [id, navigate]);
 
-    // Funções de manipulação do formulário (iguais as anteriores)
-    const handleImageUpload = (event) => {
+    const handleImageUpload = async (event) => {
         const file = event.target.files[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => setUploadedImage(e.target.result);
-        reader.readAsDataURL(file);
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Ficheiro demasiado grande. Máximo: 5MB');
+            return;
+        }
+
+        if (!user) {
+            setIsLoginModalOpen(true);
+            return;
+        }
+
+        setUploading(true);
+        const { data, error } = await uploadCustomizationImage(file, user.id);
+        setUploading(false);
+
+        if (error) {
+            alert('Erro ao enviar imagem: ' + error.message);
+            return;
+        }
+
+        setUploadedImage(data.publicUrl);
     };
 
     const removeImage = (e) => { e.stopPropagation(); setUploadedImage(null); if (fileInputRef.current) fileInputRef.current.value = ""; };
@@ -192,7 +211,12 @@ const ProdutoDetalhe = () => {
                                         'border-gray-200 hover:border-brand-blue hover:bg-gray-50 cursor-pointer'
                                     }`}
                             >
-                                {uploadedImage && isImageRequired ? (
+                                {uploading ? (
+                                    <div className="flex flex-col items-center gap-3">
+                                        <Loader2 className="animate-spin text-brand-blue" size={32} />
+                                        <span className="text-sm text-gray-600 font-medium">A enviar imagem...</span>
+                                    </div>
+                                ) : uploadedImage && isImageRequired ? (
                                     <div className="flex items-center gap-4 p-4 w-full h-full">
                                         <div className="h-full aspect-square rounded-xl overflow-hidden border border-gray-200 bg-white shadow-sm"><img src={uploadedImage} alt="Upload" className="w-full h-full object-cover" /></div>
                                         <div className="flex-1">
@@ -236,6 +260,11 @@ const ProdutoDetalhe = () => {
                     </button>
                 </div>
             </div>
+
+            <LoginModal 
+                isOpen={isLoginModalOpen} 
+                onClose={() => setIsLoginModalOpen(false)} 
+            />
         </motion.div>
     );
 };

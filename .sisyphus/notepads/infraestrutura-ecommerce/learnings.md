@@ -282,3 +282,116 @@ const session = await stripe.checkout.sessions.create({
 
 ### Commit Message
 fix(checkout): verificar pagamento na pÃ¡gina de sucesso
+
+## Task 4: Frontend Filter - useProducts & useProduct Hooks
+
+### Key Learnings
+
+1. **Defense-in-Depth Security Pattern**
+   - RLS policies (Task 1) enforce is_active = true at database level for anonymous users
+   - Frontend hooks add .eq('is_active', true) filter as additional layer
+   - Both layers work together: DB prevents unauthorized access, frontend prevents accidental queries
+   - Admin page (src/pages/admin/Products.jsx) fetches directly without using hooks - sees all products
+
+2. **Hook Filter Placement**
+   - In useProducts: Add .eq('is_active', true) after .select('*') and before .order()
+   - In useProduct: Add .eq('is_active', true) after .select('*') and before .eq('id', id)
+   - Order matters: filters are applied left-to-right in Supabase query chain
+   - Multiple .eq() calls are combined with AND logic
+
+3. **Hook Interface Preservation**
+   - Filter is internal implementation detail - does NOT change hook params or return values
+   - useProducts(options) still accepts same options (limit, orderBy, ascending)
+   - useProduct(id) still accepts same id parameter
+   - Return objects unchanged: { products, loading, error } and { product, loading, error }
+
+4. **Query Chain Pattern**
+   - Pattern: select ? filter ? order ? limit
+   - Filters applied left-to-right in Supabase query chain
+   - Multiple .eq() calls combined with AND logic
+
+### Verification Checklist
+- ? useProducts hook includes .eq('is_active', true) after .select('*')
+- ? useProduct hook includes .eq('is_active', true) after .select('*')
+- ? Hook interfaces unchanged (same params, same return)
+- ? Build passes: 
+pm run build
+- ? Commit: ix(products): filtrar produtos ativos e permitir acesso anônimo
+
+### Integration Points
+- Frontend hooks now filter active products for all public pages
+- Admin page still sees all products (uses direct Supabase query, not hooks)
+- RLS policies provide database-level enforcement
+- Combined approach ensures no inactive products leak to frontend
+
+- Criação de guia de setup Stripe em PT-PT para facilitar o handover e deploy em produção.
+- Reforço da necessidade de sincronizar segredos entre Stripe e Supabase Edge Functions.
+
+
+ # #   T a s k   8 :   I n t e g r a r   U p l o a d   d e   I m a g e m   n a   P á g i n a   d e   P r o d u t o 
+ 
+ # # #   F r o n t e n d   U p l o a d   I n t e g r a t i o n   P a t t e r n s 
+ 
+ 1 .   * * I m p o r t   O r g a n i z a t i o n * * 
+       -   I m p o r t   u p l o a d C u s t o m i z a t i o n I m a g e   f r o m   ' . . / s e r v i c e s / s t o r a g e ' 
+       -   I m p o r t   u s e A u t h   f r o m   ' . . / c o n t e x t / A u t h C o n t e x t '   f o r   u s e r   a u t h e n t i c a t i o n 
+       -   I m p o r t   L o g i n M o d a l   f r o m   ' . . / c o m p o n e n t s / L o g i n M o d a l '   f o r   u n a u t h e n t i c a t e d   u s e r s 
+       -   A l l   i m p o r t s   g r o u p e d   l o g i c a l l y   a t   t o p   o f   f i l e 
+ 
+ 2 .   * * S t a t e   M a n a g e m e n t * * 
+       -   A d d   u p l o a d i n g   s t a t e :   c o n s t   [ u p l o a d i n g ,   s e t U p l o a d i n g ]   =   u s e S t a t e ( f a l s e ) 
+       -   E x t r a c t   u s e r   a n d   s e t I s L o g i n M o d a l O p e n   f r o m   u s e A u t h   h o o k 
+       -   u p l o a d e d I m a g e   s t a t e   n o w   s t o r e s   S u p a b a s e   p u b l i c   U R L   ( n o t   d a t a   U R L ) 
+ 
+ 3 .   * * U p l o a d   H a n d l e r   P a t t e r n * * 
+       -   C o n v e r t   h a n d l e I m a g e U p l o a d   t o   a s y n c   f u n c t i o n 
+       -   V a l i d a t e   f i l e   s i z e   b e f o r e   u p l o a d :   i f   ( f i l e . s i z e   >   5   *   1 0 2 4   *   1 0 2 4 ) 
+       -   C h e c k   a u t h e n t i c a t i o n :   i f   ( ! u s e r )   {   s e t I s L o g i n M o d a l O p e n ( t r u e ) ;   r e t u r n ;   } 
+       -   S h o w   l o a d i n g   s t a t e   d u r i n g   u p l o a d :   s e t U p l o a d i n g ( t r u e / f a l s e ) 
+       -   U p l o a d   v i a   u p l o a d C u s t o m i z a t i o n I m a g e ( f i l e ,   u s e r . i d ) 
+       -   H a n d l e   e r r o r s   w i t h   u s e r - f r i e n d l y   a l e r t :   ' E r r o   a o   e n v i a r   i m a g e m :   '   +   e r r o r . m e s s a g e 
+       -   S e t   u p l o a d e d I m a g e   t o   d a t a . p u b l i c U r l   o n   s u c c e s s 
+ 
+ 4 .   * * U I   L o a d i n g   S t a t e * * 
+       -   S h o w   L o a d e r 2   s p i n n e r   w h e n   u p l o a d i n g   i s   t r u e 
+       -   L o a d i n g   s t a t e   r e p l a c e s   u p l o a d   a r e a   c o n t e n t   ( n o t   o v e r l a y e d ) 
+       -   M e s s a g e :   ' A   e n v i a r   i m a g e m . . . '   i n   g r a y   t e x t 
+       -   P r e v e n t   c l i c k s   d u r i n g   u p l o a d   ( u p l o a d i n g   c h e c k   b e f o r e   t r i g g e r F i l e I n p u t ) 
+ 
+ 5 .   * * L o g i n   M o d a l   I n t e g r a t i o n * * 
+       -   A d d   L o g i n M o d a l   c o m p o n e n t   a t   e n d   o f   J S X   ( b e f o r e   c l o s i n g   m o t i o n . d i v ) 
+       -   P a s s   i s L o g i n M o d a l O p e n   a n d   s e t I s L o g i n M o d a l O p e n   a s   p r o p s 
+       -   M o d a l   a u t o m a t i c a l l y   h a n d l e s   l o g i n / r e g i s t e r   f l o w 
+       -   U s e r   c a n   u p l o a d   a f t e r   s u c c e s s f u l   a u t h e n t i c a t i o n 
+ 
+ 6 .   * * E r r o r   H a n d l i n g   S t r a t e g y * * 
+       -   F i l e   s i z e   v a l i d a t i o n :   a l e r t   w i t h   P o r t u g u e s e   m e s s a g e 
+       -   A u t h e n t i c a t i o n   c h e c k :   o p e n   m o d a l   i n s t e a d   o f   g e n e r i c   a l e r t 
+       -   U p l o a d   e r r o r s :   s h o w   e r r o r . m e s s a g e   f r o m   S u p a b a s e   ( d e s c r i p t i v e ) 
+       -   R e s e t   u p l o a d i n g   s t a t e   i n   f i n a l l y   b l o c k   ( n o t   i m p l e m e n t e d   -   h a n d l e d   i n   i f / e l s e ) 
+ 
+ # # #   I n t e g r a t i o n   P o i n t s 
+ 
+ -   * * S t o r a g e   S e r v i c e * * :   u p l o a d C u s t o m i z a t i o n I m a g e ( f i l e ,   u s e r I d )   r e t u r n s   {   d a t a :   {   p u b l i c U r l   } ,   e r r o r   } 
+ -   * * A u t h C o n t e x t * * :   P r o v i d e s   u s e r   o b j e c t   w i t h   i d ,   a n d   m o d a l   s t a t e   m a n a g e m e n t 
+ -   * * L o g i n M o d a l * * :   H a n d l e s   a u t h e n t i c a t i o n   f l o w   w h e n   u s e r   c l i c k s   u p l o a d   w i t h o u t   l o g i n 
+ -   * * C a r t * * :   u p l o a d e d I m a g e   ( S u p a b a s e   U R L )   s t o r e d   i n   c u s t o m i z a t i o n   o b j e c t   w h e n   a d d i n g   t o   c a r t 
+ 
+ # # #   K e y   D e c i s i o n s 
+ 
+ 1 .   * * L o g i n   M o d a l   v s   A l e r t * * :   U s e   s e t I s L o g i n M o d a l O p e n ( t r u e )   i n s t e a d   o f   a l e r t   -   b e t t e r   U X 
+ 2 .   * * F i l e   S i z e   L i m i t * * :   5 M B   c l i e n t - s i d e   v a l i d a t i o n   b e f o r e   u p l o a d   -   p r e v e n t s   u n n e c e s s a r y   A P I   c a l l s 
+ 3 .   * * L o a d i n g   S t a t e * * :   S h o w   s p i n n e r   i n   u p l o a d   a r e a   ( n o t   s e p a r a t e   o v e r l a y )   -   c l e a r e r   f e e d b a c k 
+ 4 .   * * E r r o r   M e s s a g e s * * :   U s e   e r r o r . m e s s a g e   f r o m   S u p a b a s e   -   m o r e   d e s c r i p t i v e   t h a n   g e n e r i c   e r r o r 
+ 5 .   * * S t a t e   C l e a n u p * * :   D o n ' t   a u t o - c l e a r   u p l o a d e d I m a g e   o n   e r r o r   -   u s e r   c a n   r e t r y   w i t h o u t   r e - s e l e c t i n g   f i l e 
+ 
+ # # #   V e r i f i c a t i o n   C h e c k l i s t 
+ -   '  I m p o r t s :   u p l o a d C u s t o m i z a t i o n I m a g e ,   u s e A u t h ,   L o g i n M o d a l 
+ -   '  S t a t e :   u p l o a d i n g   s t a t e   a d d e d 
+ -   '  H a n d l e r :   a s y n c   h a n d l e I m a g e U p l o a d   w i t h   v a l i d a t i o n ,   a u t h   c h e c k ,   u p l o a d 
+ -   '  U I :   L o a d i n g   s p i n n e r   s h o w s   d u r i n g   u p l o a d 
+ -   '  M o d a l :   L o g i n M o d a l   c o m p o n e n t   a d d e d   t o   J S X 
+ -   '  B u i l d :   n p m   r u n   b u i l d   p a s s e s 
+ -   '  C o m m i t :   f e a t ( u p l o a d ) :   i n t e g r a r   u p l o a d   d e   i m a g e m   n a   p e r s o n a l i z a ç ã o   d o   p r o d u t o 
+  
+ 
