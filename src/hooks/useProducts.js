@@ -15,6 +15,7 @@ export const useProducts = (options = {}) => {
         let query = supabase
           .from('products')
           .select('*')
+          .eq('is_active', true)
           .order(orderBy, { ascending });
 
         if (limit) {
@@ -26,10 +27,9 @@ export const useProducts = (options = {}) => {
         if (fetchError) throw fetchError;
 
         setProducts(data || []);
-      } catch (err) {
-        setError(err.message);
-        console.error('Erro ao buscar produtos:', err.message);
-      } finally {
+       } catch (err) {
+         setError(err.message);
+       } finally {
         setLoading(false);
       }
     };
@@ -51,19 +51,19 @@ export const useProduct = (id) => {
     const fetchProduct = async () => {
       try {
         setLoading(true);
-        const { data, error: fetchError } = await supabase
+         const { data, error: fetchError } = await supabase
           .from('products')
           .select('*')
+          .eq('is_active', true)
           .eq('id', id)
           .single();
 
         if (fetchError) throw fetchError;
 
         setProduct(data);
-      } catch (err) {
-        setError(err.message);
-        console.error('Erro ao buscar produto:', err.message);
-      } finally {
+       } catch (err) {
+         setError(err.message);
+       } finally {
         setLoading(false);
       }
     };
