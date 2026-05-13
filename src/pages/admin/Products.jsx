@@ -28,7 +28,7 @@ const AdminProducts = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef(null);
 
-  const CATEGORY_OPTIONS = ['Canecas', 'Camisetas', 'Azulejos', 'Acessórios'];
+  const CATEGORY_OPTIONS = ['Canecas', 'Camisetas', 'Azulejos', 'Acessórios', 'Kits'];
 
   const emptyForm = {
     name: '',

@@ -12,7 +12,7 @@ const Produtos = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   // 2. Categorias disponíveis
-  const categories = ['Todos', 'Canecas', 'Camisetas', 'Azulejos', 'Acessórios'];
+  const categories = ['Todos', 'Canecas', 'Camisetas', 'Azulejos', 'Acessórios', 'Kits'];
 
   // 3. Buscar produtos no Supabase ao carregar a página
   useEffect(() => {
