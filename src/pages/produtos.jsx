@@ -20,9 +20,10 @@ const Produtos = () => {
       try {
         setLoading(true);
         const { data, error } = await supabase
-          .from('products') // Nome da sua tabela
+          .from('products')
           .select('*')
-          .order('created_at', { ascending: false }); // Opcional: Mostra os mais novos primeiro
+          .eq('is_active', true)
+          .order('created_at', { ascending: false });
 
         if (error) throw error;
 
@@ -138,13 +139,13 @@ const Produtos = () => {
                 }}
                 transition={{ duration: 0.4 }}
               >
-                <ProductCard 
+                <ProductCard
                   id={produto.id}
-                  // Mapeando as colunas do banco para as props do Card:
-                  title={produto.name}           // No banco é 'name', no Card é 'title'
+                  title={produto.name}
                   description={produto.description}
                   price={produto.price}
-                  image={produto.image_url}      // Importante: passando a URL da imagem
+                  image={produto.image_url}
+                  stockQuantity={produto.stock_quantity}
                 />
               </motion.div>
             ))}

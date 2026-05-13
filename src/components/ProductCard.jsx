@@ -4,10 +4,12 @@ import { motion } from 'framer-motion';
 import { Package } from 'lucide-react';
 import { formatPriceSimple } from '../utils/formatters';
 
-const ProductCard = ({ id, title, description, price, image }) => {
+const ProductCard = ({ id, title, description, price, image, stockQuantity }) => {
+  const esgotado = stockQuantity === 0;
+
   return (
     <motion.div
-      whileHover={{ y: -8 }}
+      whileHover={{ y: esgotado ? 0 : -8 }}
       transition={{ type: "spring", stiffness: 300 }}
       className="group relative rounded-2xl bg-white p-1 h-full flex flex-col"
     >
@@ -16,25 +18,30 @@ const ProductCard = ({ id, title, description, price, image }) => {
 
       <div className="relative h-full bg-white rounded-xl p-6 flex flex-col items-center text-center shadow-sm group-hover:shadow-card-hover transition-shadow duration-300">
 
-        {/* --- 1. ÁREA DA IMAGEM (Quadrado Perfeito) --- */}
-        {/* MUDANÇA AQUI: Troquei 'h-48' por 'aspect-square'. 
-            . */}
+        {/* Imagem */}
         <div className="w-full aspect-square bg-gradient-to-tr from-blue-50 to-pink-50 rounded-lg flex items-center justify-center mb-6 group-hover:scale-105 transition-transform duration-500 overflow-hidden relative shrink-0 z-0">
           {image ? (
-            // A imagem vai preencher o quadrado (object-cover) sem distorcer
             <img
               src={image}
               alt={title}
-              className="w-full h-full object-cover object-center"
+              className={`w-full h-full object-cover object-center ${esgotado ? 'opacity-50 grayscale' : ''}`}
               loading="lazy"
               decoding="async"
             />
           ) : (
-            // O fallback (ícone) também fica centralizado no quadrado
             <>
               <div className="absolute bg-brand-blue/10 w-32 h-32 rounded-full blur-2xl -top-10 -left-10 -z-10"></div>
               <Package size={64} className="text-brand-blue/50 relative z-10" strokeWidth={1.5} />
             </>
+          )}
+
+          {/* Badge Esgotado */}
+          {esgotado && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="bg-red-600 text-white font-bold text-sm px-4 py-1.5 rounded-full shadow-lg rotate-[-8deg] tracking-wide uppercase">
+                Esgotado
+              </span>
+            </div>
           )}
         </div>
 
@@ -57,12 +64,18 @@ const ProductCard = ({ id, title, description, price, image }) => {
             {formatPriceSimple(price)}
           </div>
 
-          <Link
-            to={`/produto/${id}`}
-            className="block w-full py-3 px-6 bg-gradient-to-r from-brand-pink to-brand-blue text-white font-bold rounded-xl shadow-md hover:shadow-glow-blue hover:scale-[1.02] active:scale-95 transition-all duration-300"
-          >
-            Personalizar Agora
-          </Link>
+          {esgotado ? (
+            <div className="block w-full py-3 px-6 bg-gray-200 text-gray-400 font-bold rounded-xl text-center cursor-not-allowed">
+              Produto Esgotado
+            </div>
+          ) : (
+            <Link
+              to={`/produto/${id}`}
+              className="block w-full py-3 px-6 bg-gradient-to-r from-brand-pink to-brand-blue text-white font-bold rounded-xl shadow-md hover:shadow-glow-blue hover:scale-[1.02] active:scale-95 transition-all duration-300"
+            >
+              Personalizar Agora
+            </Link>
+          )}
         </div>
       </div>
     </motion.div>

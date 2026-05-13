@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingCart, Menu, X, User, LogOut } from 'lucide-react';
+import { ShoppingCart, Menu, X, User, LogOut, Settings } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 import { useCart } from '../context/CartContext';
@@ -10,7 +10,8 @@ import LoginModal from './LoginModal';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [nomeExibicao, setNomeExibicao] = useState(''); // Estado para guardar o nome vindo do banco
+  const [nomeExibicao, setNomeExibicao] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const { cartCount, setIsCartOpen } = useCart();
   const { user, logout, isLoginModalOpen, setIsLoginModalOpen } = useAuth();
@@ -28,31 +29,29 @@ const Header = () => {
     };
   }, [isMenuOpen]);
 
-  // --- NOVA LÓGICA: Buscar o nome na tabela profiles ---
   useEffect(() => {
     async function pegarNomeDoPerfil() {
       if (user) {
-        // Busca na tabela profiles onde o ID é igual ao do usuário logado
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('profiles')
-          .select('first_name')
+          .select('first_name, role')
           .eq('id', user.id)
           .single();
 
-        if (data && data.first_name) {
+        if (data?.first_name) {
           setNomeExibicao(data.first_name);
         } else {
-          // Fallback: se não achar, usa o e-mail cortado
           setNomeExibicao(user.email.split('@')[0]);
         }
+        setIsAdmin(data?.role === 'admin');
       } else {
-        setNomeExibicao(''); // Limpa se deslogar
+        setNomeExibicao('');
+        setIsAdmin(false);
       }
     }
 
     pegarNomeDoPerfil();
-  }, [user]); // Roda toda vez que o usuário muda (login/logout)
-  // -----------------------------------------------------
+  }, [user]);
 
   const containerClass = "container mx-auto px-8 md:px-16 lg:px-32";
   
@@ -84,6 +83,12 @@ const Header = () => {
             <Link to="/produtos" className={getNavLinkStyle("/produtos")}>Produtos</Link>
             <Link to="/sobre" className={getNavLinkStyle("/sobre")}>Sobre Nos</Link>
             <Link to="/localizacao" className={getNavLinkStyle("/localizacao")}>Localizacao</Link>
+            {isAdmin && (
+              <Link to="/admin" className={`flex items-center gap-1.5 ${getNavLinkStyle("/admin")}`}>
+                <Settings size={15} />
+                Admin
+              </Link>
+            )}
 
             {/* Botao Carrinho */}
             <button
@@ -209,6 +214,12 @@ const Header = () => {
                     <Link to="/localizacao" onClick={() => setIsMenuOpen(false)} className={`block ${getNavLinkStyle("/localizacao")}`}>Localizacao</Link>
                     {user && (
                       <Link to="/perfil" onClick={() => setIsMenuOpen(false)} className={`block ${getNavLinkStyle("/perfil")}`}>Meu Perfil</Link>
+                    )}
+                    {isAdmin && (
+                      <Link to="/admin" onClick={() => setIsMenuOpen(false)} className={`flex items-center gap-2 ${getNavLinkStyle("/admin")}`}>
+                        <Settings size={16} />
+                        Painel Admin
+                      </Link>
                     )}
                   </nav>
                 </div>
