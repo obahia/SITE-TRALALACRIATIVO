@@ -42,9 +42,26 @@ Deno.serve(async (req) => {
     const orderId = session.metadata?.orderId
 
     if (orderId) {
+      const shipping = session.shipping_details
+      const shippingAddress = shipping?.address
+        ? {
+            name: shipping.name || '',
+            line1: shipping.address.line1 || '',
+            line2: shipping.address.line2 || '',
+            city: shipping.address.city || '',
+            postal_code: shipping.address.postal_code || '',
+            state: shipping.address.state || '',
+            country: shipping.address.country || '',
+          }
+        : null
+
       const { error } = await supabase
         .from('orders')
-        .update({ status: 'pago', stripe_session_id: session.id })
+        .update({
+          status: 'pago',
+          stripe_session_id: session.id,
+          ...(shippingAddress ? { shipping_address: shippingAddress } : {}),
+        })
         .eq('id', orderId)
 
       if (error) {

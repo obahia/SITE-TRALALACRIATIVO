@@ -177,6 +177,9 @@ Deno.serve(async (req) => {
       success_url: finalSuccessUrl,
       cancel_url: cancelUrl || 'https://example.com/cancelado',
       metadata: { orderId: String(order.id) },
+      shipping_address_collection: {
+        allowed_countries: ['PT', 'ES', 'FR', 'DE', 'GB', 'IT', 'NL', 'BE', 'BR'],
+      },
     })
 
     return new Response(JSON.stringify({ url: session.url, orderId: order.id }), {

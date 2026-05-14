@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Search, 
-  Filter, 
-  Eye, 
+import {
+  Search,
+  Eye,
   Package,
   Truck,
-  Check,
   XCircle,
   Loader2,
   FileText,
-  Image as ImageIcon,
-  Calendar,
-  Euro
+  MapPin,
+  Tag,
+  ExternalLink,
+  Download,
+  RefreshCw,
+  CheckCircle,
+  AlertCircle,
+  ChevronDown
 } from 'lucide-react';
 import { supabase } from '../../services/supabase';
 
@@ -22,8 +25,16 @@ const AdminOrders = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderItems, setOrderItems] = useState([]);
-  const [trackingCode, setTrackingCode] = useState('');
-  const [trackingUrl, setTrackingUrl] = useState('');
+
+  // Shippo state
+  const [shippoLoading, setShippoLoading] = useState(false);
+  const [shipment, setShipment] = useState(null);
+  const [selectedRate, setSelectedRate] = useState(null);
+  const [buyingLabel, setBuyingLabel] = useState(false);
+  const [trackingInfo, setTrackingInfo] = useState(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+  const [parcel, setParcel] = useState({ length: '20', width: '15', height: '10', weight: '0.5' });
+  const [showParcelEdit, setShowParcelEdit] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -38,9 +49,9 @@ const AdminOrders = () => {
 
       if (error) throw error;
       setOrders(data || []);
-     } catch (error) {
-       // Error already handled by state
-     } finally {
+    } catch (_error) {
+      // handled by state
+    } finally {
       setLoading(false);
     }
   };
@@ -51,12 +62,11 @@ const AdminOrders = () => {
         .from('order_items')
         .select('*')
         .eq('order_id', orderId);
-
       if (error) throw error;
       setOrderItems(data || []);
-     } catch (error) {
-       // Error already handled by state
-     }
+    } catch (_error) {
+      // handled
+    }
   };
 
   const updateOrderStatus = async (orderId, newStatus) => {
@@ -65,71 +75,115 @@ const AdminOrders = () => {
         .from('orders')
         .update({ status: newStatus })
         .eq('id', orderId);
-
       if (error) throw error;
-      
-      setOrders(orders.map(order => 
-        order.id === orderId ? { ...order, status: newStatus } : order
-      ));
-      
+
+      setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
       if (selectedOrder?.id === orderId) {
         setSelectedOrder({ ...selectedOrder, status: newStatus });
       }
-     } catch (error) {
-       console.error('Erro ao atualizar status', error);
-     }
-  };
-
-  const saveTracking = async () => {
-    try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ tracking_code: trackingCode, tracking_url: trackingUrl })
-        .eq('id', selectedOrder.id);
-
-      if (error) throw error;
-
-      const updatedOrder = { ...selectedOrder, tracking_code: trackingCode, tracking_url: trackingUrl };
-      
-      setOrders(orders.map(order => 
-        order.id === selectedOrder.id ? updatedOrder : order
-      ));
-      
-      setSelectedOrder(updatedOrder);
     } catch (error) {
-      console.error('Erro ao guardar rastreio', error);
-    }
-  };
-
-  const generateCttUrl = () => {
-    if (trackingCode) {
-      setTrackingUrl(`https://www.ctt.pt/feapl_2/app/open/cttexpresso/objectSearch/objectSearch.jspx?objects=${trackingCode}`);
+      console.error('Erro ao atualizar status', error);
     }
   };
 
   const openOrderDetails = async (order) => {
     setSelectedOrder(order);
-    setTrackingCode(order.tracking_code || '');
-    setTrackingUrl(order.tracking_url || '');
+    setShipment(null);
+    setSelectedRate(null);
+    setTrackingInfo(null);
     await fetchOrderItems(order.id);
   };
 
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('pt-PT', {
-      style: 'currency',
-      currency: 'EUR',
-    }).format(value || 0);
+  // --- Shippo helpers ---
+
+  const callShippo = async (body) => {
+    const { data, error } = await supabase.functions.invoke('shippo', { body });
+    if (error) throw new Error(error.message || 'Erro Shippo');
+    if (data?.error) throw new Error(data.error);
+    return data;
   };
 
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('pt-PT', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  const getRates = async () => {
+    if (!selectedOrder?.shipping_address) return;
+    setShippoLoading(true);
+    setShipment(null);
+    setSelectedRate(null);
+    try {
+      const { shipment: s } = await callShippo({
+        action: 'get_rates',
+        orderId: selectedOrder.id,
+        parcel: {
+          length: parcel.length,
+          width: parcel.width,
+          height: parcel.height,
+          distance_unit: 'cm',
+          weight: parcel.weight,
+          mass_unit: 'kg',
+        },
+      });
+      setShipment(s);
+    } catch (err) {
+      alert(`Erro ao obter tarifas: ${err.message}`);
+    } finally {
+      setShippoLoading(false);
+    }
   };
+
+  const buyLabel = async () => {
+    if (!selectedRate) return;
+    setBuyingLabel(true);
+    try {
+      const { transaction } = await callShippo({
+        action: 'buy_label',
+        orderId: selectedOrder.id,
+        rateId: selectedRate.object_id,
+      });
+
+      const updated = {
+        ...selectedOrder,
+        tracking_code: transaction.tracking_number,
+        tracking_url: transaction.tracking_url_provider,
+        label_url: transaction.label_url,
+        shippo_transaction_id: transaction.object_id,
+        status: 'enviado',
+      };
+      setSelectedOrder(updated);
+      setOrders(orders.map(o => o.id === updated.id ? updated : o));
+      setShipment(null);
+      setSelectedRate(null);
+    } catch (err) {
+      alert(`Erro ao comprar etiqueta: ${err.message}`);
+    } finally {
+      setBuyingLabel(false);
+    }
+  };
+
+  const loadTracking = async () => {
+    setTrackingLoading(true);
+    setTrackingInfo(null);
+    try {
+      const { tracking } = await callShippo({
+        action: 'track',
+        orderId: selectedOrder.id,
+      });
+      setTrackingInfo(tracking);
+    } catch (err) {
+      alert(`Erro ao rastrear: ${err.message}`);
+    } finally {
+      setTrackingLoading(false);
+    }
+  };
+
+  // --- Formatters ---
+
+  const formatCurrency = (value) =>
+    new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(value || 0);
+
+  const formatDate = (date) =>
+    new Date(date).toLocaleDateString('pt-PT', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
 
   const getStatusColor = (status) => {
     const colors = {
@@ -142,19 +196,23 @@ const AdminOrders = () => {
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
-  const capitalizeStatus = (status) => {
-    if (!status) return '';
-    return status.charAt(0).toUpperCase() + status.slice(1);
+  const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+
+  const getTrackingStatusColor = (status) => {
+    if (!status) return 'text-gray-500';
+    const s = status.toLowerCase();
+    if (s.includes('delivered')) return 'text-green-600';
+    if (s.includes('transit') || s.includes('in_transit')) return 'text-blue-600';
+    if (s.includes('failure') || s.includes('returned')) return 'text-red-600';
+    return 'text-yellow-600';
   };
 
   const filteredOrders = orders.filter(order => {
-    const matchesSearch = 
+    const matchesSearch =
       order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       `${order.profiles?.first_name} ${order.profiles?.last_name}`.toLowerCase().includes(searchTerm.toLowerCase());
-    
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-    
     return matchesSearch && matchesStatus;
   });
 
@@ -190,8 +248,8 @@ const AdminOrders = () => {
           className="px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-brand-blue"
         >
           <option value="all">Todos os status</option>
-          {statusOptions.map(status => (
-            <option key={status} value={status}>{capitalizeStatus(status)}</option>
+          {statusOptions.map(s => (
+            <option key={s} value={s}>{capitalize(s)}</option>
           ))}
         </select>
       </div>
@@ -207,13 +265,14 @@ const AdminOrders = () => {
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-500">Data</th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-500">Total</th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-500">Status</th>
+                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-500">Envio</th>
                 <th className="text-left py-4 px-6 text-sm font-semibold text-gray-500">Ações</th>
               </tr>
             </thead>
             <tbody>
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-gray-400">
+                  <td colSpan={7} className="text-center py-8 text-gray-400">
                     Nenhum pedido encontrado
                   </td>
                 </tr>
@@ -229,16 +288,25 @@ const AdminOrders = () => {
                         <p className="text-sm text-gray-500">{order.profiles?.email}</p>
                       </div>
                     </td>
-                    <td className="py-4 px-6 text-sm text-gray-500">
-                      {formatDate(order.created_at)}
-                    </td>
-                    <td className="py-4 px-6 font-bold text-gray-800">
-                      {formatCurrency(order.total_amount)}
-                    </td>
+                    <td className="py-4 px-6 text-sm text-gray-500">{formatDate(order.created_at)}</td>
+                    <td className="py-4 px-6 font-bold text-gray-800">{formatCurrency(order.total_amount)}</td>
                     <td className="py-4 px-6">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                        {capitalizeStatus(order.status)}
+                        {capitalize(order.status)}
                       </span>
+                    </td>
+                    <td className="py-4 px-6">
+                      {order.label_url ? (
+                        <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                          <CheckCircle size={14} /> Etiqueta criada
+                        </span>
+                      ) : order.shipping_address ? (
+                        <span className="flex items-center gap-1 text-xs text-blue-600 font-medium">
+                          <MapPin size={14} /> Morada disponível
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
                     </td>
                     <td className="py-4 px-6">
                       <button
@@ -260,16 +328,20 @@ const AdminOrders = () => {
       {selectedOrder && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
+              <div>
                 <h2 className="text-xl font-bold">Pedido #{selectedOrder.id.slice(0, 8)}</h2>
-                <button
-                  onClick={() => setSelectedOrder(null)}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
-                >
-                  <XCircle size={24} className="text-gray-400" />
-                </button>
+                <span className={`mt-1 inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(selectedOrder.status)}`}>
+                  {capitalize(selectedOrder.status)}
+                </span>
               </div>
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <XCircle size={24} className="text-gray-400" />
+              </button>
             </div>
 
             <div className="p-6 space-y-6">
@@ -281,7 +353,9 @@ const AdminOrders = () => {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-gray-500">Nome</p>
-                    <p className="font-medium">{selectedOrder.profiles?.first_name} {selectedOrder.profiles?.last_name}</p>
+                    <p className="font-medium">
+                      {selectedOrder.profiles?.first_name} {selectedOrder.profiles?.last_name}
+                    </p>
                   </div>
                   <div>
                     <p className="text-gray-500">Email</p>
@@ -289,6 +363,37 @@ const AdminOrders = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Shipping Address */}
+              {selectedOrder.shipping_address && (
+                <div className="bg-blue-50 rounded-xl p-4">
+                  <h3 className="font-semibold mb-3 flex items-center gap-2 text-blue-800">
+                    <MapPin size={18} /> Morada de Envio
+                  </h3>
+                  <div className="text-sm text-blue-900 space-y-1">
+                    <p className="font-medium">{selectedOrder.shipping_address.name}</p>
+                    <p>{selectedOrder.shipping_address.line1}</p>
+                    {selectedOrder.shipping_address.line2 && <p>{selectedOrder.shipping_address.line2}</p>}
+                    <p>
+                      {selectedOrder.shipping_address.postal_code} {selectedOrder.shipping_address.city}
+                      {selectedOrder.shipping_address.state ? `, ${selectedOrder.shipping_address.state}` : ''}
+                    </p>
+                    <p className="font-medium">{selectedOrder.shipping_address.country}</p>
+                  </div>
+                </div>
+              )}
+
+              {!selectedOrder.shipping_address && (
+                <div className="bg-yellow-50 rounded-xl p-4 flex items-start gap-3">
+                  <AlertCircle size={18} className="text-yellow-600 mt-0.5 shrink-0" />
+                  <div className="text-sm text-yellow-800">
+                    <p className="font-medium">Sem morada de envio</p>
+                    <p className="text-xs mt-1 text-yellow-700">
+                      A morada é recolhida automaticamente pelo Stripe no checkout. Pedidos anteriores à integração de envio não a têm.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Order Items */}
               <div>
@@ -301,20 +406,11 @@ const AdminOrders = () => {
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="font-medium">{item.name}</p>
-                          <p className="text-sm text-gray-500">Quantidade: {item.quantity}</p>
-                          {item.customization && (
-                            <div className="mt-2 space-y-1">
-                              {item.customization.personalizationType && (
-                                <p className="text-xs text-brand-blue">
-                                  Tipo: {item.customization.personalizationType}
-                                </p>
-                              )}
-                              {item.customization.instructions && (
-                                <p className="text-xs text-gray-500 italic">
-                                  "{item.customization.instructions}"
-                                </p>
-                              )}
-                            </div>
+                          <p className="text-sm text-gray-500">Qtd: {item.quantity}</p>
+                          {item.customization?.instructions && (
+                            <p className="text-xs text-gray-500 italic mt-1">
+                              "{item.customization.instructions}"
+                            </p>
                           )}
                         </div>
                         <p className="font-bold">{formatCurrency(item.price * item.quantity)}</p>
@@ -330,49 +426,194 @@ const AdminOrders = () => {
                 </div>
               </div>
 
-              {/* Rastreio da Encomenda */}
-              <div className="bg-gray-50 rounded-xl p-4">
-                <h3 className="font-semibold mb-3 flex items-center gap-2">
-                  <Truck size={18} /> Rastreio da Encomenda
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Código de Rastreio
-                    </label>
-                    <input
-                      type="text"
-                      value={trackingCode}
-                      onChange={(e) => setTrackingCode(e.target.value)}
-                      className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      URL de Rastreio
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={trackingUrl}
-                        onChange={(e) => setTrackingUrl(e.target.value)}
-                        placeholder="https://www.ctt.pt/feapl_2/app/open/cttexpresso/objectSearch/objectSearch.jspx?objects=..."
-                        className="flex-1 px-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 text-sm"
-                      />
-                      <button
-                        onClick={generateCttUrl}
-                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium text-sm hover:bg-gray-300 transition-colors whitespace-nowrap"
-                      >
-                        Gerar URL CTT
-                      </button>
+              {/* Shippo Section */}
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <div className="bg-gray-50 px-4 py-3 flex items-center gap-2">
+                  <Truck size={18} className="text-brand-blue" />
+                  <h3 className="font-semibold">Envio com Shippo</h3>
+                </div>
+
+                <div className="p-4 space-y-4">
+                  {/* Label already bought */}
+                  {selectedOrder.label_url && (
+                    <div className="bg-green-50 rounded-xl p-4">
+                      <div className="flex items-center gap-2 text-green-700 font-semibold mb-3">
+                        <CheckCircle size={18} /> Etiqueta de envio criada
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        {selectedOrder.tracking_code && (
+                          <div className="flex items-center gap-2">
+                            <Tag size={14} className="text-gray-400" />
+                            <span className="font-mono font-medium">{selectedOrder.tracking_code}</span>
+                          </div>
+                        )}
+                        <div className="flex gap-2 mt-3">
+                          <a
+                            href={selectedOrder.label_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-4 py-2 bg-brand-blue text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+                          >
+                            <Download size={16} /> Descarregar Etiqueta
+                          </a>
+                          {selectedOrder.tracking_url && (
+                            <a
+                              href={selectedOrder.tracking_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                            >
+                              <ExternalLink size={16} /> Ver Rastreio
+                            </a>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <button
-                    onClick={saveTracking}
-                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-medium text-sm hover:bg-blue-700 transition-colors"
-                  >
-                    Guardar Rastreio
-                  </button>
+                  )}
+
+                  {/* Tracking live status */}
+                  {selectedOrder.tracking_code && (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-medium text-gray-700">Estado do Rastreio (Shippo)</p>
+                        <button
+                          onClick={loadTracking}
+                          disabled={trackingLoading}
+                          className="flex items-center gap-1 text-xs text-brand-blue hover:underline"
+                        >
+                          {trackingLoading
+                            ? <Loader2 size={12} className="animate-spin" />
+                            : <RefreshCw size={12} />}
+                          Atualizar
+                        </button>
+                      </div>
+                      {trackingInfo && (
+                        <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-2">
+                          <p className={`font-semibold ${getTrackingStatusColor(trackingInfo.tracking_status?.status)}`}>
+                            {trackingInfo.tracking_status?.status_details || trackingInfo.tracking_status?.status || 'Sem informação'}
+                          </p>
+                          {trackingInfo.tracking_status?.location?.city && (
+                            <p className="text-gray-500 text-xs">
+                              {trackingInfo.tracking_status.location.city}, {trackingInfo.tracking_status.location.country}
+                            </p>
+                          )}
+                          {trackingInfo.tracking_history?.slice(0, 4).map((event, i) => (
+                            <div key={i} className="text-xs text-gray-500 border-t border-gray-100 pt-2">
+                              <span className="font-medium text-gray-700">{event.status_details}</span>
+                              {event.location?.city && ` — ${event.location.city}`}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Create label flow */}
+                  {!selectedOrder.label_url && selectedOrder.shipping_address && (
+                    <>
+                      {/* Parcel dimensions */}
+                      <div>
+                        <button
+                          onClick={() => setShowParcelEdit(!showParcelEdit)}
+                          className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-800"
+                        >
+                          <ChevronDown size={16} className={`transition-transform ${showParcelEdit ? 'rotate-180' : ''}`} />
+                          Dimensões da embalagem
+                        </button>
+                        {showParcelEdit && (
+                          <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                            {[
+                              { label: 'Comprimento (cm)', key: 'length' },
+                              { label: 'Largura (cm)', key: 'width' },
+                              { label: 'Altura (cm)', key: 'height' },
+                              { label: 'Peso (kg)', key: 'weight' },
+                            ].map(({ label, key }) => (
+                              <div key={key}>
+                                <label className="block text-xs text-gray-500 mb-1">{label}</label>
+                                <input
+                                  type="number"
+                                  value={parcel[key]}
+                                  onChange={(e) => setParcel({ ...parcel, [key]: e.target.value })}
+                                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-brand-blue"
+                                  min="0"
+                                  step="0.1"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={getRates}
+                        disabled={shippoLoading}
+                        className="flex items-center justify-center gap-2 w-full py-2.5 bg-brand-blue text-white rounded-xl font-medium text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+                      >
+                        {shippoLoading
+                          ? <><Loader2 size={16} className="animate-spin" /> A obter tarifas...</>
+                          : <><Truck size={16} /> Obter Tarifas de Envio</>}
+                      </button>
+
+                      {/* Rates list */}
+                      {shipment?.rates && shipment.rates.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium text-gray-700">Escolher tarifa:</p>
+                          {shipment.rates
+                            .filter(r => r.available)
+                            .sort((a, b) => parseFloat(a.amount) - parseFloat(b.amount))
+                            .map((rate) => (
+                              <button
+                                key={rate.object_id}
+                                onClick={() => setSelectedRate(rate)}
+                                className={`w-full p-3 rounded-xl border-2 text-left transition-all ${
+                                  selectedRate?.object_id === rate.object_id
+                                    ? 'border-brand-blue bg-blue-50'
+                                    : 'border-gray-200 hover:border-gray-300'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="font-medium text-sm">{rate.provider} — {rate.servicelevel?.name}</p>
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                      {rate.estimated_days
+                                        ? `${rate.estimated_days} dia${rate.estimated_days !== 1 ? 's' : ''} úteis`
+                                        : 'Prazo não disponível'}
+                                    </p>
+                                  </div>
+                                  <span className="font-bold text-brand-blue text-lg">
+                                    {rate.amount} {rate.currency}
+                                  </span>
+                                </div>
+                              </button>
+                            ))}
+
+                          {selectedRate && (
+                            <button
+                              onClick={buyLabel}
+                              disabled={buyingLabel}
+                              className="flex items-center justify-center gap-2 w-full py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 mt-2"
+                            >
+                              {buyingLabel
+                                ? <><Loader2 size={16} className="animate-spin" /> A comprar etiqueta...</>
+                                : <><Download size={16} /> Comprar Etiqueta — {selectedRate.amount} {selectedRate.currency}</>}
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {shipment?.rates?.length === 0 && (
+                        <p className="text-sm text-yellow-700 bg-yellow-50 rounded-lg p-3">
+                          Nenhuma tarifa disponível para este destino.
+                        </p>
+                      )}
+                    </>
+                  )}
+
+                  {!selectedOrder.shipping_address && !selectedOrder.label_url && (
+                    <p className="text-sm text-gray-500">
+                      Não é possível criar etiqueta sem morada de envio.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -391,7 +632,7 @@ const AdminOrders = () => {
                           : `${getStatusColor(status)} hover:opacity-80`
                       }`}
                     >
-                      {capitalizeStatus(status)}
+                      {capitalize(status)}
                     </button>
                   ))}
                 </div>
