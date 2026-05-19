@@ -1,7 +1,9 @@
 // src/context/CartContext.jsx
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import { useAuth } from './AuthContext';
+import { logger } from '../utils/logger';
 
 const CartContext = createContext();
 
@@ -15,6 +17,7 @@ const saveToLocalStorage = (items) => {
 
 export const CartProvider = ({ children }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [cartItems, setCartItems] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
@@ -22,23 +25,33 @@ export const CartProvider = ({ children }) => {
   useEffect(() => {
     const loadCart = async () => {
       if (user) {
-        // Buscar carrinho do Supabase
-        const { data } = await supabase
-          .from('cart_items')
-          .select('*, product:products(*)')
-          .eq('user_id', user.id);
+        try {
+          // Buscar carrinho do Supabase
+          const { data, error } = await supabase
+            .from('cart_items')
+            .select('*, product:products(*)')
+            .eq('user_id', user.id);
 
-        if (data) {
-          const formattedItems = data.map(item => ({
-            cartId: item.id,
-            id: item.product.id,
-            name: item.product.name,
-            price: item.price || item.product.price, // Usa o preço salvo no carrinho
-            image: item.product.image_url || item.product.image || '',
-            quantity: item.quantity,
-            customization: item.customization
-          }));
-          setCartItems(formattedItems);
+          if (error) {
+            logger.error('Error loading cart from database', { error: error.message });
+            return;
+          }
+
+          if (data) {
+            const formattedItems = data.map(item => ({
+              cartId: item.id,
+              id: item.product.id,
+              name: item.product.name,
+              price: item.price || item.product.price,
+              image: item.product.image_url || item.product.image || '',
+              quantity: item.quantity,
+              customization: item.customization
+            }));
+            setCartItems(formattedItems);
+            logger.debug('Cart loaded successfully', { itemCount: formattedItems.length });
+          }
+        } catch (err) {
+          logger.error('Exception loading cart', { error: err.message });
         }
 
         // Migrar carrinho local para Supabase (se existir)
@@ -250,37 +263,15 @@ export const CartProvider = ({ children }) => {
 
     if (cartItems.length === 0) return;
 
-    setCheckoutLoading(true);
-    setCheckoutError('');
     try {
-      // Enviar apenas product_id, quantity e customization — precos sao calculados no servidor
-      const checkoutItems = cartItems.map(item => ({
-        product_id: item.id,
-        quantity: item.quantity,
-        customization: item.customization || null,
-      }));
+      setCheckoutLoading(true);
+      setCheckoutError('');
 
-      // Edge function cria o pedido + itens + sessao Stripe (tudo server-side)
-      const { data, error: functionError } = await supabase.functions.invoke('create-checkout-session', {
-        body: {
-          cartItems: checkoutItems,
-          successUrl: `${window.location.origin}/sucesso`,
-          cancelUrl: `${window.location.origin}/cancelado`,
-        }
-      });
-
-      if (functionError) throw functionError;
-
-      // Redirecionar para o Stripe
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error('Nao foi possivel gerar a sessao de pagamento.');
-      }
-
-     } catch (err) {
-       setCheckoutError('Erro ao processar pagamento. Por favor, tente novamente.');
-     } finally {
+      // Redirecionar para página de checkout
+      navigate('/checkout');
+    } catch (err) {
+      logger.error('Checkout error', { error: err.message });
+      setCheckoutError(err.message || 'Erro ao processar pagamento. Por favor, tente novamente.');
       setCheckoutLoading(false);
     }
   };

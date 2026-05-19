@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Lock, Loader2, User, Sparkles, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { isValidEmail, isValidPassword, isValidName } from '../utils/validation';
+import { logger } from '../utils/logger';
 
 const LoginModal = ({ isOpen, onClose }) => {
   const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
@@ -29,18 +31,33 @@ const LoginModal = ({ isOpen, onClose }) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setPasswordError('');
 
     try {
       if (isRegistering) {
-        if (!formData.firstName || !formData.lastName) {
-          throw new Error('Preenche o nome e o apelido');
+        // Validate email
+        if (!isValidEmail(formData.email)) {
+          throw new Error('Email inválido');
         }
-        if (formData.password.length < 6) {
+
+        // Validate names
+        if (!isValidName(formData.firstName)) {
+          throw new Error('Nome inválido');
+        }
+        if (!isValidName(formData.lastName)) {
+          throw new Error('Apelido inválido');
+        }
+
+        // Validate password
+        if (!isValidPassword(formData.password)) {
           setPasswordError('A palavra-passe deve ter pelo menos 6 caracteres');
+          setLoading(false);
           return;
         }
+
         if (formData.password !== formData.confirmPassword) {
-          setPasswordError('As palavras-passe nao coincidem');
+          setPasswordError('As palavras-passe não coincidem');
+          setLoading(false);
           return;
         }
 
@@ -57,11 +74,18 @@ const LoginModal = ({ isOpen, onClose }) => {
           onClose();
         }, 3000);
       } else {
+        // Validate email for login
+        if (!isValidEmail(formData.email)) {
+          throw new Error('Email inválido');
+        }
+
         await signIn(formData.email, formData.password);
         onClose();
       }
     } catch (err) {
-      setError(err.message || 'Erro ao autenticar');
+      const errorMessage = err.message || 'Erro ao autenticar';
+      setError(errorMessage);
+      logger.error('Auth error', { type: isRegistering ? 'signup' : 'signin', error: errorMessage });
     } finally {
       setLoading(false);
     }

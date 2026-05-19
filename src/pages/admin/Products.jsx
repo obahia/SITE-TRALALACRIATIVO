@@ -15,6 +15,7 @@ import {
   Hash,
 } from 'lucide-react';
 import { supabase } from '../../services/supabase';
+import { isValidProductData } from '../../utils/validation';
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
@@ -122,8 +123,9 @@ const AdminProducts = () => {
   };
 
   const handleSave = async () => {
-    if (!formData.name || !formData.price) {
-      alert('Preenche o nome e o preço');
+    const validation = isValidProductData(formData);
+    if (!validation.isValid) {
+      alert(validation.errors.join('\n'));
       return;
     }
 

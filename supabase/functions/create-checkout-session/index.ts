@@ -168,21 +168,24 @@ Deno.serve(async (req) => {
     const separator = (successUrl || '').includes('?') ? '&' : '?'
     const finalSuccessUrl = `${successUrl || 'https://example.com/sucesso'}${separator}orderId=${order.id}`
 
-    // Create Stripe checkout session
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card', 'multibanco'],
-      line_items,
-      mode: 'payment',
-      locale: 'pt',
-      success_url: finalSuccessUrl,
-      cancel_url: cancelUrl || 'https://example.com/cancelado',
-      metadata: { orderId: String(order.id) },
-      shipping_address_collection: {
-        allowed_countries: ['PT', 'ES', 'FR', 'DE', 'GB', 'IT', 'NL', 'BE', 'BR'],
+    // Create Stripe Payment Intent for embedded checkout
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(totalAmount * 100),
+      currency: 'eur',
+      automatic_payment_methods: {
+        enabled: true,
+        allow_redirects: 'never',
+      },
+      metadata: {
+        orderId: String(order.id),
+        userId: user.id,
       },
     })
 
-    return new Response(JSON.stringify({ url: session.url, orderId: order.id }), {
+    return new Response(JSON.stringify({
+      clientSecret: paymentIntent.client_secret,
+      orderId: order.id,
+    }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

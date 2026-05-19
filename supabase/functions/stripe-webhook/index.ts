@@ -37,7 +37,31 @@ Deno.serve(async (req) => {
     })
   }
 
-  if (event.type === 'checkout.session.completed') {
+  // Handle both checkout.session.completed (old) and payment_intent.succeeded (new Payment Element)
+  if (event.type === 'payment_intent.succeeded') {
+    const paymentIntent = event.data.object as Stripe.PaymentIntent
+    const orderId = paymentIntent.metadata?.orderId
+
+    if (orderId) {
+      // Update order status to 'pago' when payment succeeds
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          status: 'pago',
+          stripe_session_id: paymentIntent.id,
+        })
+        .eq('id', orderId)
+
+      if (error) {
+        console.error('Failed to update order:', error)
+        return new Response(JSON.stringify({ error: 'Failed to update order' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+    }
+  } else if (event.type === 'checkout.session.completed') {
+    // Legacy support for checkout sessions (if still using Stripe Checkout)
     const session = event.data.object as Stripe.Checkout.Session
     const orderId = session.metadata?.orderId
 
