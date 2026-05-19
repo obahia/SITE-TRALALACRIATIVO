@@ -150,9 +150,12 @@ const CartSidebar = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={startStripeCheckout}
+                  onClick={() => {
+                    setIsCartOpen(false);
+                    startStripeCheckout();
+                  }}
                   disabled={checkoutLoading}
-                  className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-black transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full bg-gradient-to-r from-brand-blue to-brand-pink text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-glow-blue transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {checkoutLoading ? (
                     <Loader2 className="animate-spin" size={20} />
