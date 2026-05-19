@@ -39,21 +39,30 @@ const Checkout = () => {
     setError(null);
 
     try {
+      // Obter token de autenticação
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError || !session) {
+        throw new Error('Não autenticado');
+      }
+
       const checkoutItems = cartItems.map(item => ({
         product_id: item.id,
         quantity: item.quantity,
         customization: item.customization || null,
       }));
 
-      // Chamar Edge Function
+      // Chamar Edge Function com autenticação
       const { data, error: functionError } = await supabase.functions.invoke(
         'create-checkout-session',
         {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
           body: {
             cartItems: checkoutItems,
             successUrl: `${window.location.origin}/sucesso`,
             cancelUrl: `${window.location.origin}/produtos`,
-            mode: 'payment', // Pode ser 'setup' ou 'subscription'
           },
         }
       );
