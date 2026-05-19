@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../services/supabase';
 import { useAuth } from './AuthContext';
+import { logger } from '../utils/logger';
 
 const CartContext = createContext();
 
@@ -22,23 +23,33 @@ export const CartProvider = ({ children }) => {
   useEffect(() => {
     const loadCart = async () => {
       if (user) {
-        // Buscar carrinho do Supabase
-        const { data } = await supabase
-          .from('cart_items')
-          .select('*, product:products(*)')
-          .eq('user_id', user.id);
+        try {
+          // Buscar carrinho do Supabase
+          const { data, error } = await supabase
+            .from('cart_items')
+            .select('*, product:products(*)')
+            .eq('user_id', user.id);
 
-        if (data) {
-          const formattedItems = data.map(item => ({
-            cartId: item.id,
-            id: item.product.id,
-            name: item.product.name,
-            price: item.price || item.product.price, // Usa o preço salvo no carrinho
-            image: item.product.image_url || item.product.image || '',
-            quantity: item.quantity,
-            customization: item.customization
-          }));
-          setCartItems(formattedItems);
+          if (error) {
+            logger.error('Error loading cart from database', { error: error.message });
+            return;
+          }
+
+          if (data) {
+            const formattedItems = data.map(item => ({
+              cartId: item.id,
+              id: item.product.id,
+              name: item.product.name,
+              price: item.price || item.product.price,
+              image: item.product.image_url || item.product.image || '',
+              quantity: item.quantity,
+              customization: item.customization
+            }));
+            setCartItems(formattedItems);
+            logger.debug('Cart loaded successfully', { itemCount: formattedItems.length });
+          }
+        } catch (err) {
+          logger.error('Exception loading cart', { error: err.message });
         }
 
         // Migrar carrinho local para Supabase (se existir)
@@ -253,14 +264,12 @@ export const CartProvider = ({ children }) => {
     setCheckoutLoading(true);
     setCheckoutError('');
     try {
-      // Enviar apenas product_id, quantity e customization — precos sao calculados no servidor
       const checkoutItems = cartItems.map(item => ({
         product_id: item.id,
         quantity: item.quantity,
         customization: item.customization || null,
       }));
 
-      // Edge function cria o pedido + itens + sessao Stripe (tudo server-side)
       const { data, error: functionError } = await supabase.functions.invoke('create-checkout-session', {
         body: {
           cartItems: checkoutItems,
@@ -269,18 +278,22 @@ export const CartProvider = ({ children }) => {
         }
       });
 
-      if (functionError) throw functionError;
+      if (functionError) {
+        logger.error('Checkout function error', { error: functionError });
+        throw functionError;
+      }
 
-      // Redirecionar para o Stripe
       if (data?.url) {
         window.location.href = data.url;
       } else {
-        throw new Error('Nao foi possivel gerar a sessao de pagamento.');
+        logger.error('No checkout URL returned', { data });
+        throw new Error('Não foi possível gerar a sessão de pagamento. Por favor, tente novamente.');
       }
 
-     } catch (err) {
-       setCheckoutError('Erro ao processar pagamento. Por favor, tente novamente.');
-     } finally {
+    } catch (err) {
+      logger.error('Checkout error', { error: err.message });
+      setCheckoutError(err.message || 'Erro ao processar pagamento. Por favor, tente novamente.');
+    } finally {
       setCheckoutLoading(false);
     }
   };

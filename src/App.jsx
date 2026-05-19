@@ -1,31 +1,40 @@
 // src/App.jsx
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { AuthProvider } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import Header from './components/Header';
 import Footer from './components/Footer';
-// --- IMPORTANTE: O Carrinho ---
 import { CartProvider } from './context/CartContext';
 import CartSidebar from './components/CartSideBar';
-import Home from './pages/home';
-import Produtos from './pages/produtos';
-import Sobre from './pages/Sobre';
-import ProdutoDetalhe from './pages/produtodetalhe';
-import NotFound from './pages/NotFound';
-
-import Sucesso from './pages/sucesso';
-import Cancelado from './pages/cancelado';
-import Perfil from './pages/perfil';
-import Localizacao from './pages/localizacao';
 import ProtectedRoute from './components/ProtectedRoute';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 import AdminLayout from './components/AdminLayout';
-import AdminDashboard from './pages/admin/Dashboard';
-import AdminOrders from './pages/admin/Orders';
-import AdminProducts from './pages/admin/Products';
-import AdminUsers from './pages/admin/Users';
+import { LoadingSpinner } from './components/ui';
+
+// Core pages (loaded immediately)
+import Home from './pages/home';
+import Produtos from './pages/produtos';
+import NotFound from './pages/NotFound';
+
+// Lazy-loaded pages
+const Sobre = lazy(() => import('./pages/Sobre'));
+const ProdutoDetalhe = lazy(() => import('./pages/produtodetalhe'));
+const Sucesso = lazy(() => import('./pages/sucesso'));
+const Cancelado = lazy(() => import('./pages/cancelado'));
+const Perfil = lazy(() => import('./pages/perfil'));
+const Localizacao = lazy(() => import('./pages/localizacao'));
+const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
+const AdminOrders = lazy(() => import('./pages/admin/Orders'));
+const AdminProducts = lazy(() => import('./pages/admin/Products'));
+const AdminUsers = lazy(() => import('./pages/admin/Users'));
+
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center h-screen">
+    <LoadingSpinner size={32} />
+  </div>
+);
 
 const AnimatedRoutes = () => {
   const location = useLocation();
@@ -35,29 +44,31 @@ const AnimatedRoutes = () => {
       <Routes location={location} key={location.pathname}>
         <Route path="/" element={<Home />} />
         <Route path="/produtos" element={<Produtos />} />
-        <Route path="/sobre" element={<Sobre />} />
-        <Route path="/localizacao" element={<Localizacao />} />
-        <Route path="/produto/:id" element={<ProdutoDetalhe />} />
-        <Route path="/sucesso" element={<Sucesso />} />
-        <Route path="/cancelado" element={<Cancelado />} />
+        <Route path="/sobre" element={<Suspense fallback={<LoadingFallback />}><Sobre /></Suspense>} />
+        <Route path="/localizacao" element={<Suspense fallback={<LoadingFallback />}><Localizacao /></Suspense>} />
+        <Route path="/produto/:id" element={<Suspense fallback={<LoadingFallback />}><ProdutoDetalhe /></Suspense>} />
+        <Route path="/sucesso" element={<Suspense fallback={<LoadingFallback />}><Sucesso /></Suspense>} />
+        <Route path="/cancelado" element={<Suspense fallback={<LoadingFallback />}><Cancelado /></Suspense>} />
 
-        {/* Rota Protegida de Exemplo */}
         <Route
           path="/perfil"
           element={
             <ProtectedRoute>
-              <Perfil />
+              <Suspense fallback={<LoadingFallback />}>
+                <Perfil />
+              </Suspense>
             </ProtectedRoute>
           }
         />
 
-        {/* Rotas de Admin */}
         <Route
           path="/admin"
           element={
             <ProtectedAdminRoute>
               <AdminLayout>
-                <AdminDashboard />
+                <Suspense fallback={<LoadingFallback />}>
+                  <AdminDashboard />
+                </Suspense>
               </AdminLayout>
             </ProtectedAdminRoute>
           }
@@ -67,7 +78,9 @@ const AnimatedRoutes = () => {
           element={
             <ProtectedAdminRoute>
               <AdminLayout>
-                <AdminOrders />
+                <Suspense fallback={<LoadingFallback />}>
+                  <AdminOrders />
+                </Suspense>
               </AdminLayout>
             </ProtectedAdminRoute>
           }
@@ -77,7 +90,9 @@ const AnimatedRoutes = () => {
           element={
             <ProtectedAdminRoute>
               <AdminLayout>
-                <AdminProducts />
+                <Suspense fallback={<LoadingFallback />}>
+                  <AdminProducts />
+                </Suspense>
               </AdminLayout>
             </ProtectedAdminRoute>
           }
@@ -87,13 +102,14 @@ const AnimatedRoutes = () => {
           element={
             <ProtectedAdminRoute>
               <AdminLayout>
-                <AdminUsers />
+                <Suspense fallback={<LoadingFallback />}>
+                  <AdminUsers />
+                </Suspense>
               </AdminLayout>
             </ProtectedAdminRoute>
           }
         />
 
-        {/* Catch-all 404 route */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AnimatePresence>
