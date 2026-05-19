@@ -1,6 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Quote, Star } from 'lucide-react';
-import { supabase } from '../services/supabase';
 
 const FALLBACK_TESTIMONIALS = [
   { id: '1', name: 'Maria Silva', message: 'Adorei a qualidade das canecas! Chegaram bem embaladas e o design ficou perfeito. Recomendo muito!', rating: 5 },
@@ -16,24 +15,8 @@ const TestimonialCarousel = () => {
   const containerClass = "container mx-auto px-8 md:px-16 lg:px-32";
 
   useEffect(() => {
-    const fetchTestimonials = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('testimonials')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error || !data || data.length === 0) {
-          setTestimonials(FALLBACK_TESTIMONIALS);
-        } else {
-          setTestimonials(data);
-        }
-      } catch (err) {
-        setTestimonials(FALLBACK_TESTIMONIALS);
-      }
-    };
-
-    fetchTestimonials();
+    // Use fallback testimonials - database table not created yet
+    setTestimonials(FALLBACK_TESTIMONIALS);
   }, []);
 
   const scroll = (direction) => {
