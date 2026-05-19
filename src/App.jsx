@@ -21,6 +21,7 @@ import NotFound from './pages/NotFound';
 // Lazy-loaded pages
 const Sobre = lazy(() => import('./pages/Sobre'));
 const ProdutoDetalhe = lazy(() => import('./pages/produtodetalhe'));
+const Checkout = lazy(() => import('./pages/checkout'));
 const Sucesso = lazy(() => import('./pages/sucesso'));
 const Cancelado = lazy(() => import('./pages/cancelado'));
 const Perfil = lazy(() => import('./pages/perfil'));
@@ -47,6 +48,16 @@ const AnimatedRoutes = () => {
         <Route path="/sobre" element={<Suspense fallback={<LoadingFallback />}><Sobre /></Suspense>} />
         <Route path="/localizacao" element={<Suspense fallback={<LoadingFallback />}><Localizacao /></Suspense>} />
         <Route path="/produto/:id" element={<Suspense fallback={<LoadingFallback />}><ProdutoDetalhe /></Suspense>} />
+        <Route
+          path="/checkout"
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<LoadingFallback />}>
+                <Checkout />
+              </Suspense>
+            </ProtectedRoute>
+          }
+        />
         <Route path="/sucesso" element={<Suspense fallback={<LoadingFallback />}><Sucesso /></Suspense>} />
         <Route path="/cancelado" element={<Suspense fallback={<LoadingFallback />}><Cancelado /></Suspense>} />
 

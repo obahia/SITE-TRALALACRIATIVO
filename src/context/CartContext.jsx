@@ -1,5 +1,6 @@
 // src/context/CartContext.jsx
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import { useAuth } from './AuthContext';
 import { logger } from '../utils/logger';
@@ -16,6 +17,7 @@ const saveToLocalStorage = (items) => {
 
 export const CartProvider = ({ children }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [cartItems, setCartItems] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
@@ -261,39 +263,15 @@ export const CartProvider = ({ children }) => {
 
     if (cartItems.length === 0) return;
 
-    setCheckoutLoading(true);
-    setCheckoutError('');
     try {
-      const checkoutItems = cartItems.map(item => ({
-        product_id: item.id,
-        quantity: item.quantity,
-        customization: item.customization || null,
-      }));
+      setCheckoutLoading(true);
+      setCheckoutError('');
 
-      const { data, error: functionError } = await supabase.functions.invoke('create-checkout-session', {
-        body: {
-          cartItems: checkoutItems,
-          successUrl: `${window.location.origin}/sucesso`,
-          cancelUrl: `${window.location.origin}/cancelado`,
-        }
-      });
-
-      if (functionError) {
-        logger.error('Checkout function error', { error: functionError });
-        throw functionError;
-      }
-
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        logger.error('No checkout URL returned', { data });
-        throw new Error('Não foi possível gerar a sessão de pagamento. Por favor, tente novamente.');
-      }
-
+      // Redirecionar para página de checkout
+      navigate('/checkout');
     } catch (err) {
       logger.error('Checkout error', { error: err.message });
       setCheckoutError(err.message || 'Erro ao processar pagamento. Por favor, tente novamente.');
-    } finally {
       setCheckoutLoading(false);
     }
   };
