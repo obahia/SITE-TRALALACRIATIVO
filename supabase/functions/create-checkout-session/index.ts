@@ -168,23 +168,26 @@ Deno.serve(async (req) => {
     const separator = (successUrl || '').includes('?') ? '&' : '?'
     const finalSuccessUrl = `${successUrl || 'https://example.com/sucesso'}${separator}orderId=${order.id}`
 
-    // Create Stripe Payment Intent for embedded checkout
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(totalAmount * 100),
-      currency: 'eur',
-      automatic_payment_methods: {
-        enabled: true,
-        allow_redirects: 'never',
-      },
+    // Create Stripe checkout session (Payment Element compatible)
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      ui_mode: 'embedded',
+      line_items,
+      mode: 'payment',
+      locale: 'pt',
+      client_reference_id: user.id,
+      customer_email: user.email,
       metadata: {
         orderId: String(order.id),
         userId: user.id,
       },
+      redirect_on_completion: 'never',
     })
 
     return new Response(JSON.stringify({
-      clientSecret: paymentIntent.client_secret,
+      clientSecret: session.client_secret,
       orderId: order.id,
+      sessionId: session.id,
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

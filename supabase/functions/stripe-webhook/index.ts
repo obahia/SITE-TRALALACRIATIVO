@@ -37,54 +37,17 @@ Deno.serve(async (req) => {
     })
   }
 
-  // Handle both checkout.session.completed (old) and payment_intent.succeeded (new Payment Element)
-  if (event.type === 'payment_intent.succeeded') {
-    const paymentIntent = event.data.object as Stripe.PaymentIntent
-    const orderId = paymentIntent.metadata?.orderId
-
-    if (orderId) {
-      // Update order status to 'pago' when payment succeeds
-      const { error } = await supabase
-        .from('orders')
-        .update({
-          status: 'pago',
-          stripe_session_id: paymentIntent.id,
-        })
-        .eq('id', orderId)
-
-      if (error) {
-        console.error('Failed to update order:', error)
-        return new Response(JSON.stringify({ error: 'Failed to update order' }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' },
-        })
-      }
-    }
-  } else if (event.type === 'checkout.session.completed') {
-    // Legacy support for checkout sessions (if still using Stripe Checkout)
+  // Handle checkout.session.completed
+  if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session
     const orderId = session.metadata?.orderId
 
     if (orderId) {
-      const shipping = session.shipping_details
-      const shippingAddress = shipping?.address
-        ? {
-            name: shipping.name || '',
-            line1: shipping.address.line1 || '',
-            line2: shipping.address.line2 || '',
-            city: shipping.address.city || '',
-            postal_code: shipping.address.postal_code || '',
-            state: shipping.address.state || '',
-            country: shipping.address.country || '',
-          }
-        : null
-
       const { error } = await supabase
         .from('orders')
         .update({
           status: 'pago',
           stripe_session_id: session.id,
-          ...(shippingAddress ? { shipping_address: shippingAddress } : {}),
         })
         .eq('id', orderId)
 
