@@ -21,7 +21,9 @@ import {
 import { supabase } from '../../services/supabase';
 
 const SHIPPING_METHOD_LABEL = {
-  ctt: 'CTT Expresso',
+  ctt: 'CTT Expresso (continente)',
+  'ctt-leiria': 'CTT Expresso (distrito de Leiria)',
+  'ctt-verificar': 'CTT: verificar portes (morada fora da zona declarada)',
   levantamento: 'Levantamento em Leiria',
 };
 

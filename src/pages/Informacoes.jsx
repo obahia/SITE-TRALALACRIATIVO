@@ -60,8 +60,9 @@ const Informacoes = () => (
         <Section id="envios" title="Envios e levantamento">
           <ul className="list-disc pl-6 space-y-2">
             <li>
-              <strong>CTT Expresso</strong> para Portugal: {formatPriceSimple(SHIPPING.cttPrice)}, entrega em 2 a 4 dias úteis depois de
-              expedido. <strong>Grátis</strong> em encomendas a partir de {SHIPPING.freeFrom} €.
+              <strong>CTT Expresso</strong>: {formatPriceSimple(SHIPPING.leiriaPrice)} no distrito de Leiria e{' '}
+              {formatPriceSimple(SHIPPING.cttPrice)} no resto de Portugal continental, entrega em 2 a 4 dias úteis depois de expedido.{' '}
+              <strong>Grátis</strong> em encomendas a partir de {SHIPPING.freeFrom} €. O valor certo aparece quando indica o código postal.
             </li>
             <li><strong>Levantamento grátis em Leiria</strong> ({CONTACT.address}), com dia e hora combinados.</li>
           </ul>

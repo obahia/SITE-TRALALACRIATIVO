@@ -16,8 +16,35 @@ function envNumber(name: string, fallback: number): number {
   return Number.isFinite(value) && value >= 0 ? value : fallback
 }
 
-const SHIPPING_CTT_PRICE = envNumber('SHIPPING_CTT_PRICE', 4.9) // € CTT Expresso (Portugal)
-const SHIPPING_FREE_FROM = envNumber('SHIPPING_FREE_FROM', 60) // € subtotal de produtos para portes grátis
+const SHIPPING_LEIRIA_PRICE = envNumber('SHIPPING_LEIRIA_PRICE', 4) // € CTT dentro do distrito de Leiria
+const SHIPPING_CTT_PRICE = envNumber('SHIPPING_CTT_PRICE', 8.5) // € CTT resto de Portugal continental
+const SHIPPING_FREE_FROM = envNumber('SHIPPING_FREE_FROM', 90) // € subtotal de produtos para portes grátis
+
+// Códigos postais (4 primeiros dígitos) do distrito de Leiria.
+// Manter igual a src/utils/shipping.js e ao stripe-webhook.
+const LEIRIA_RANGES: [number, number][] = [
+  [2400, 2499], // Leiria, Marinha Grande, Batalha, Porto de Mós, Alcobaça, Nazaré
+  [2500, 2529], // Caldas da Rainha, Óbidos, Peniche
+  [2540, 2549], // Bombarral
+  [3100, 3109], // Pombal
+  [3240, 3289], // Ansião, Alvaiázere, Figueiró dos Vinhos, Pedrógão Grande, Castanheira de Pera
+]
+
+type PostalCheck =
+  | { ok: true; postal: string; zone: 'leiria' | 'continente' }
+  | { ok: false; error: string }
+
+function checkPostalCode(raw: unknown): PostalCheck {
+  const match = typeof raw === 'string' ? raw.trim().match(/^(\d{4})-?(\d{3})$/) : null
+  if (!match) return { ok: false, error: 'Indique um código postal válido, por exemplo 2400-123.' }
+  const prefix = Number(match[1])
+  if (prefix < 1000) return { ok: false, error: 'Indique um código postal válido, por exemplo 2400-123.' }
+  if (prefix >= 9000) {
+    return { ok: false, error: 'Para os Açores e a Madeira, peça-nos orçamento para o envio.' }
+  }
+  const leiria = LEIRIA_RANGES.some(([from, to]) => prefix >= from && prefix <= to)
+  return { ok: true, postal: `${match[1]}-${match[2]}`, zone: leiria ? 'leiria' : 'continente' }
+}
 const MAX_QUANTITY = 1000
 const MAX_CART_ITEMS = 100
 
@@ -144,7 +171,15 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'Utilizador inválido' }, 401)
     }
 
-    const { cartItems, successUrl } = await req.json()
+    const { cartItems, successUrl, delivery, postalCode } = await req.json()
+
+    const isPickup = delivery === 'levantamento'
+    let postal: Extract<PostalCheck, { ok: true }> | null = null
+    if (!isPickup) {
+      const checked = checkPostalCode(postalCode)
+      if (!checked.ok) return jsonResponse({ error: checked.error }, 400)
+      postal = checked
+    }
 
     if (!Array.isArray(cartItems) || cartItems.length === 0) {
       return jsonResponse({ error: 'Carrinho vazio' }, 400)
@@ -248,33 +283,29 @@ Deno.serve(async (req) => {
       }
     })
 
-    // Envio: CTT Expresso (grátis acima do limite) ou levantamento em Leiria
+    // Envio: a zona vem do código postal declarado antes do pagamento, por isso
+    // o cliente vê só a opção certa (não consegue escolher a mais barata).
     const freeShipping = subtotalCents >= Math.round(SHIPPING_FREE_FROM * 100)
-    const shipping_options: Stripe.Checkout.SessionCreateParams.ShippingOption[] = [
-      {
+    // Levantamento: sem morada nem opção de envio (o Stripe só aceita shipping_options
+    // com recolha de morada); o webhook lê o método da metadata da sessão.
+    let shipping_options: Stripe.Checkout.SessionCreateParams.ShippingOption[] = []
+    if (!isPickup && postal) {
+      const inLeiria = postal.zone === 'leiria'
+      const zoneLabel = inLeiria ? 'distrito de Leiria' : 'Portugal continental'
+      const price = freeShipping ? 0 : inLeiria ? SHIPPING_LEIRIA_PRICE : SHIPPING_CTT_PRICE
+      shipping_options = [{
         shipping_rate_data: {
           type: 'fixed_amount',
-          display_name: freeShipping ? 'CTT Expresso (portes grátis)' : 'CTT Expresso',
-          fixed_amount: {
-            amount: freeShipping ? 0 : Math.round(SHIPPING_CTT_PRICE * 100),
-            currency: 'eur',
-          },
+          display_name: freeShipping ? `CTT Expresso, ${zoneLabel} (portes grátis)` : `CTT Expresso, ${zoneLabel}`,
+          fixed_amount: { amount: Math.round(price * 100), currency: 'eur' },
           delivery_estimate: {
             minimum: { unit: 'business_day', value: 2 },
             maximum: { unit: 'business_day', value: 4 },
           },
-          metadata: { method: 'ctt' },
+          metadata: { method: inLeiria ? 'ctt-leiria' : 'ctt', zone: postal.zone, postal: postal.postal },
         },
-      },
-      {
-        shipping_rate_data: {
-          type: 'fixed_amount',
-          display_name: 'Levantamento em Leiria (grátis)',
-          fixed_amount: { amount: 0, currency: 'eur' },
-          metadata: { method: 'levantamento' },
-        },
-      },
-    ]
+      }]
+    }
 
     // Create order in DB with status 'pendente' (total = subtotal; o webhook atualiza com portes)
     const { data: order, error: orderError } = await supabaseAdmin
@@ -321,12 +352,13 @@ Deno.serve(async (req) => {
         locale: 'pt',
         client_reference_id: user.id,
         customer_email: user.email,
-        shipping_address_collection: { allowed_countries: ['PT'] },
-        shipping_options,
+        ...(isPickup ? {} : { shipping_address_collection: { allowed_countries: ['PT'] }, shipping_options }),
         phone_number_collection: { enabled: true },
         metadata: {
           orderId: String(order.id),
           userId: user.id,
+          delivery: isPickup ? 'levantamento' : 'ctt',
+          ...(postal ? { declaredPostal: postal.postal, declaredZone: postal.zone } : {}),
         },
         redirect_on_completion: 'never',
       })

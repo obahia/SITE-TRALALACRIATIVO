@@ -80,7 +80,7 @@ const Ocasiao = () => {
           <p className="flex gap-3 text-ink">
             <Truck className="text-pink-ink shrink-0" aria-hidden="true" />
             <span>
-              <strong>CTT para todo o país</strong> por {formatPriceSimple(SHIPPING.cttPrice)}, grátis acima de {SHIPPING.freeFrom} €. Levantamento grátis em Leiria.
+              <strong>CTT {formatPriceSimple(SHIPPING.leiriaPrice)}</strong> no distrito de Leiria, {formatPriceSimple(SHIPPING.cttPrice)} no resto do país, grátis acima de {SHIPPING.freeFrom} €.
             </span>
           </p>
           <p className="flex gap-3 text-ink">

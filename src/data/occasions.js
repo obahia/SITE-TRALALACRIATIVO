@@ -91,8 +91,9 @@ export const PARTY_KITS = [
 
 // Envio: manter igual ao definido na edge function create-checkout-session.
 export const SHIPPING = {
-  cttPrice: 4.9,
-  freeFrom: 60,
+  leiriaPrice: 4, // CTT dentro do distrito de Leiria
+  cttPrice: 8.5, // CTT resto de Portugal continental
+  freeFrom: 90,
   pickupLabel: 'Levantamento grátis em Leiria',
 };
 

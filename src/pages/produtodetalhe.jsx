@@ -374,7 +374,7 @@ const ProdutoDetalhe = () => {
             <li className="flex gap-3">
               <Truck size={20} className="text-brand-blue shrink-0 mt-0.5" aria-hidden="true" />
               <span>
-                CTT {formatPriceSimple(SHIPPING.cttPrice)}, grátis acima de {SHIPPING.freeFrom} €. Levantamento grátis em Leiria.{' '}
+                CTT {formatPriceSimple(SHIPPING.leiriaPrice)} no distrito de Leiria, {formatPriceSimple(SHIPPING.cttPrice)} no resto do país, grátis acima de {SHIPPING.freeFrom} €. Levantamento grátis em Leiria.{' '}
                 <Link to="/informacoes" className="font-semibold text-brand-blue underline underline-offset-2">Saber mais</Link>
               </span>
             </li>

@@ -44,7 +44,7 @@ const STAGES = [
   },
   {
     name: 'Recebe em casa',
-    text: `CTT para todo o país por ${formatPriceSimple(SHIPPING.cttPrice)}, grátis acima de ${SHIPPING.freeFrom} €. Ou levanta em Leiria.`,
+    text: `CTT: ${formatPriceSimple(SHIPPING.leiriaPrice)} no distrito de Leiria, ${formatPriceSimple(SHIPPING.cttPrice)} no resto do país, grátis acima de ${SHIPPING.freeFrom} €.`,
     img: '/assets/produtos/kit-premium.webp',
     field: 'bg-tile-rose',
     height: 'lg:h-[60vh]',

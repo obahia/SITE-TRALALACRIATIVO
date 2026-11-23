@@ -22,8 +22,9 @@ supabase functions deploy stripe-webhook --no-verify-jwt
 ```
 
 Secrets opcionais (Dashboard → Edge Functions → Secrets):
-- `SHIPPING_CTT_PRICE` (padrão 4.9)
-- `SHIPPING_FREE_FROM` (padrão 60)
+- `SHIPPING_LEIRIA_PRICE` (padrão 4, distrito de Leiria)
+- `SHIPPING_CTT_PRICE` (padrão 8.5, resto do continente)
+- `SHIPPING_FREE_FROM` (padrão 90)
 - `SITE_URL` (padrão https://tralalacriativo.pt)
 
 No Stripe (Developers → Webhooks), o endpoint do `stripe-webhook` deve escutar `checkout.session.completed` e `checkout.session.expired` (este último cancela encomendas abandonadas).
