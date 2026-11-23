@@ -1,6 +1,6 @@
 // src/pages/Sobre.jsx
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { Heart, Star, Sparkles } from 'lucide-react';
 
 const Sobre = () => {

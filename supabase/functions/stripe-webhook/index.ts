@@ -22,10 +22,24 @@ function jsonResponse(body: unknown, status: number) {
   })
 }
 
-// 'ctt' | 'levantamento' (metadata da shipping rate criada no checkout); fallback: display_name
+// Códigos postais do distrito de Leiria (manter igual a create-checkout-session)
+const LEIRIA_RANGES: [number, number][] = [
+  [2400, 2499], [2500, 2529], [2540, 2549], [3100, 3109], [3240, 3289],
+]
+
+function zoneOf(postal: string | null | undefined): 'leiria' | 'continente' | 'ilhas' | null {
+  const match = postal?.trim().match(/^(\d{4})/)
+  if (!match) return null
+  const prefix = Number(match[1])
+  if (prefix >= 9000) return 'ilhas'
+  return LEIRIA_RANGES.some(([from, to]) => prefix >= from && prefix <= to) ? 'leiria' : 'continente'
+}
+
+// 'ctt' | 'ctt-leiria' | 'levantamento' (metadata da shipping rate criada no checkout); fallback: display_name
 async function resolveShippingMethod(session: Stripe.Checkout.Session): Promise<string | null> {
   const rate = session.shipping_cost?.shipping_rate
-  if (!rate) return null
+  // Levantamento em Leiria não tem shipping rate: vem da metadata da sessão
+  if (!rate) return session.metadata?.delivery === 'levantamento' ? 'levantamento' : null
   try {
     const shippingRate = typeof rate === 'string' ? await stripe.shippingRates.retrieve(rate) : rate
     return shippingRate.metadata?.method || shippingRate.display_name || null
@@ -117,6 +131,15 @@ Deno.serve(async (req) => {
       customer_name: session.customer_details?.name ?? null,
       shipping_address: mapShippingAddress(session),
     }
+    // Os portes foram calculados pelo código postal declarado antes de pagar.
+    // Se a morada final for de outra zona, a encomenda fica marcada para verificar.
+    const declaredZone = session.metadata?.declaredZone
+    const finalZone = zoneOf(session.shipping_details?.address?.postal_code)
+    if (declaredZone && finalZone !== declaredZone) {
+      update.shipping_method = 'ctt-verificar'
+      console.warn(`Encomenda ${orderId}: CP declarado ${session.metadata?.declaredPostal} (${declaredZone}) difere da morada (${finalZone})`)
+    }
+
     if (typeof session.amount_total === 'number') {
       update.total_amount = session.amount_total / 100
     }

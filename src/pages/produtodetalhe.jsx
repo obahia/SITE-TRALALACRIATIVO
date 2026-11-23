@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useId } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Minus, Plus, Upload, ArrowLeft, X, Check, Loader2, Package, CalendarClock, Truck, ArrowRight } from 'lucide-react';
 
 import { supabase } from '../services/supabase';
@@ -18,6 +18,7 @@ const inputClass =
 
 const ProdutoDetalhe = () => {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const uid = useId();
   const { addToCart } = useCart();
@@ -31,7 +32,13 @@ const ProdutoDetalhe = () => {
   const [selectedOption, setSelectedOption] = useState(null);
   const [uploadedImage, setUploadedImage] = useState(null);
   const [uploadError, setUploadError] = useState('');
-  const [details, setDetails] = useState({ nome: '', idade: '', tema: '', data: '' });
+  // O hero da página inicial pode trazer ?nome=&idade= já escritos pela visita.
+  const [details, setDetails] = useState(() => ({
+    nome: (searchParams.get('nome') || '').slice(0, 60),
+    idade: (searchParams.get('idade') || '').slice(0, 40),
+    tema: '',
+    data: '',
+  }));
   const [instructions, setInstructions] = useState('');
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
@@ -172,13 +179,13 @@ const ProdutoDetalhe = () => {
 
           {isQuote ? (
             <div className="mt-8 rounded-3xl bg-white border border-gray-100 p-6 md:p-8">
-              <p className="text-2xl font-bold text-brand-pink">{product.price_note || 'Sob orçamento'}</p>
+              <p className="text-2xl font-bold text-pink-ink">{product.price_note || 'Sob orçamento'}</p>
               <p className="mt-2 text-gray-700">
                 O preço depende do tamanho, do modelo e da quantidade. Diga-nos o que precisa e enviamos o valor certo.
               </p>
               <Link
                 to={`/orcamento?produto=${encodeURIComponent(product.name)}${product.occasions?.[0] ? `&ocasiao=${product.occasions[0]}` : ''}`}
-                className="mt-6 inline-flex w-full items-center justify-center gap-2 bg-brand-pink text-white text-lg font-bold h-14 rounded-2xl hover:brightness-110 transition"
+                className="mt-6 inline-flex w-full items-center justify-center gap-2 bg-pink-ink text-white text-lg font-bold h-14 rounded-2xl hover:brightness-110 transition"
               >
                 Pedir orçamento <ArrowRight size={20} />
               </Link>
@@ -341,7 +348,7 @@ const ProdutoDetalhe = () => {
               {soldOut && (
                 <p className="mt-3 text-sm text-gray-700">
                   Este produto está esgotado.{' '}
-                  <Link to={`/orcamento?produto=${encodeURIComponent(product.name)}`} className="font-bold text-brand-pink underline">
+                  <Link to={`/orcamento?produto=${encodeURIComponent(product.name)}`} className="font-bold text-pink-ink underline">
                     Pergunte-nos quando volta
                   </Link>.
                 </p>
@@ -350,7 +357,7 @@ const ProdutoDetalhe = () => {
               {quantity >= 100 && (
                 <p className="mt-3 text-sm text-gray-700">
                   Para {quantity} unidades ou mais,{' '}
-                  <Link to={`/orcamento?produto=${encodeURIComponent(product.name)}`} className="font-bold text-brand-pink underline">
+                  <Link to={`/orcamento?produto=${encodeURIComponent(product.name)}`} className="font-bold text-pink-ink underline">
                     peça orçamento
                   </Link>{' '}
                   e conseguimos um preço melhor.
@@ -367,7 +374,7 @@ const ProdutoDetalhe = () => {
             <li className="flex gap-3">
               <Truck size={20} className="text-brand-blue shrink-0 mt-0.5" aria-hidden="true" />
               <span>
-                CTT {formatPriceSimple(SHIPPING.cttPrice)}, grátis acima de {SHIPPING.freeFrom} €. Levantamento grátis em Leiria.{' '}
+                CTT {formatPriceSimple(SHIPPING.leiriaPrice)} no distrito de Leiria, {formatPriceSimple(SHIPPING.cttPrice)} no resto do país, grátis acima de {SHIPPING.freeFrom} €. Levantamento grátis em Leiria.{' '}
                 <Link to="/informacoes" className="font-semibold text-brand-blue underline underline-offset-2">Saber mais</Link>
               </span>
             </li>

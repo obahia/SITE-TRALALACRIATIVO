@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { ShoppingCart, Menu, X, User, LogOut, Settings, ChevronDown } from 'lucide-react';
-import { AnimatePresence, motion as Motion } from 'framer-motion';
+import { AnimatePresence, motion as Motion } from 'motion/react';
 
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -14,7 +14,7 @@ const containerClass = 'container mx-auto px-4 sm:px-8 md:px-12 xl:px-24';
 
 const navLinkClass = ({ isActive }) =>
   `text-[15px] font-bold px-3.5 py-2 rounded-lg transition-colors cursor-pointer ${
-    isActive ? 'bg-brand-blue/10 text-brand-blue' : 'text-gray-700 hover:bg-brand-blue/10 hover:text-brand-blue'
+    isActive ? 'bg-tile-sky text-ink' : 'text-ink hover:bg-tile-sky'
   }`;
 
 const Header = () => {
@@ -80,10 +80,10 @@ const Header = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-sm border-b border-gray-100 h-20 flex items-center">
+      <header className="sticky top-0 z-50 w-full bg-brand-light h-20 flex items-center">
         <div className={`${containerClass} w-full flex items-center justify-between gap-4`}>
           <Link to="/" className="flex items-center gap-3 shrink-0 cursor-pointer" aria-label="Tralalá Criativo, página inicial">
-            <img src="/assets/logo.png" alt="" className="w-14 h-14 object-cover rounded-full shadow-md" />
+            <img src="/assets/logo.png" alt="" className="w-14 h-14 object-cover rounded-full" />
             <span className="text-xl font-bold text-brand-dark hidden sm:block">Tralalá Criativo</span>
           </Link>
 
@@ -103,7 +103,7 @@ const Header = () => {
                 <ChevronDown size={16} className={`transition-transform ${isOccasionsOpen ? 'rotate-180' : ''}`} />
               </button>
               {isOccasionsOpen && (
-                <div className="absolute left-0 top-full mt-2 w-72 bg-white rounded-2xl border border-gray-100 shadow-[0_18px_40px_-16px_rgba(15,23,42,0.35)] p-2">
+                <div className="absolute left-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-[0_18px_40px_-16px_rgba(15,23,42,0.35)] p-2 animate-fade-in" /* taste-skill-ignore: menu suspenso */>
                   {OCCASIONS.map((o) => (
                     <Link
                       key={o.slug}
@@ -128,7 +128,7 @@ const Header = () => {
 
             <Link
               to="/orcamento"
-              className="ml-2 px-4 py-2.5 rounded-full font-bold text-sm text-brand-pink border-2 border-brand-pink/40 hover:bg-brand-pink hover:text-white hover:border-brand-pink transition-colors"
+              className="ml-2 px-5 py-2.5 rounded-full font-bold text-sm bg-pink-ink text-white hover:brightness-110 active:scale-[0.98] transition"
             >
               Pedir orçamento
             </Link>
@@ -148,7 +148,7 @@ const Header = () => {
             </button>
 
             {user ? (
-              <div className="flex items-center gap-1 ml-2 pl-3 border-l border-gray-200">
+              <div className="flex items-center gap-1 ml-3">
                 <Link
                   to="/perfil"
                   className="flex items-center gap-2 text-sm font-bold text-brand-blue hover:bg-brand-blue/10 px-3 py-2 rounded-lg transition-colors"
@@ -219,13 +219,13 @@ const Header = () => {
                 animate={{ x: 0 }}
                 exit={{ x: '100%' }}
                 transition={{ type: 'tween', duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-                className="fixed top-0 right-0 h-dvh w-[86%] max-w-sm bg-white shadow-2xl z-50 flex flex-col lg:hidden overflow-y-auto"
+                className="fixed top-0 right-0 h-dvh w-[86%] max-w-sm bg-white shadow-2xl z-50 flex flex-col lg:hidden overflow-y-auto" /* taste-skill-ignore: gaveta sobre a página */
                 role="dialog"
                 aria-modal="true"
                 aria-label="Menu"
               >
                 <div className="p-5 flex flex-col gap-5 flex-1">
-                  <div className="flex justify-between items-center pb-3 border-b border-gray-100">
+                  <div className="flex justify-between items-center pb-3">
                     <span className="text-xl font-bold text-brand-dark">Menu</span>
                     <button
                       type="button"
@@ -238,7 +238,7 @@ const Header = () => {
                   </div>
 
                   {user ? (
-                    <div className="flex justify-between items-center bg-brand-blue/5 p-3.5 rounded-xl border border-brand-blue/10">
+                    <div className="flex justify-between items-center bg-brand-blue/10 p-3.5 rounded-xl">
                       <Link to="/perfil" className="font-bold text-brand-blue flex items-center gap-2 min-w-0">
                         <User size={18} className="shrink-0" />
                         <span className="truncate">{nomeExibicao || user.email}</span>
@@ -246,7 +246,7 @@ const Header = () => {
                       <button
                         type="button"
                         onClick={() => { logout(); setIsMenuOpen(false); }}
-                        className="text-xs text-red-600 font-bold border border-red-200 px-3 py-1.5 rounded-lg bg-white hover:bg-red-50 transition-colors cursor-pointer shrink-0"
+                        className="text-sm text-red-700 font-bold px-3 py-1.5 rounded-full bg-paper hover:bg-red-50 transition-colors cursor-pointer shrink-0"
                       >
                         Sair
                       </button>
@@ -270,7 +270,7 @@ const Header = () => {
                         {o.name}
                       </NavLink>
                     ))}
-                    <div className="h-px bg-gray-100 my-2" />
+                    <div className="h-3" aria-hidden="true" />
                     <NavLink to="/sobre" className={navLinkClass}>Sobre nós</NavLink>
                     <NavLink to="/localizacao" className={navLinkClass}>Contactos</NavLink>
                     <NavLink to="/informacoes" className={navLinkClass}>Envios e encomendas</NavLink>

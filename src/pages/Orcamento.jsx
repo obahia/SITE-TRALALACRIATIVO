@@ -266,7 +266,7 @@ const Orcamento = () => {
                     <label
                       key={item}
                       className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full border-2 font-semibold cursor-pointer transition-colors focus-within:ring-4 focus-within:ring-brand-blue/30 ${
-                        checked ? 'bg-brand-pink/10 border-brand-pink text-brand-pink' : 'bg-white border-gray-200 text-gray-800 hover:border-brand-pink/60'
+                        checked ? 'bg-brand-pink/10 border-brand-pink text-pink-ink' : 'bg-white border-gray-200 text-gray-800 hover:border-brand-pink/60'
                       }`}
                     >
                       <input type="checkbox" className="sr-only" checked={checked} onChange={() => toggleProduct(item)} />
@@ -368,7 +368,7 @@ const Orcamento = () => {
               <button
                 type="submit"
                 disabled={status === 'sending'}
-                className="inline-flex items-center justify-center gap-2 bg-brand-pink text-white rounded-2xl h-14 px-10 text-lg font-bold hover:brightness-110 transition disabled:opacity-70 cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 bg-pink-ink text-white rounded-2xl h-14 px-10 text-lg font-bold hover:brightness-110 transition disabled:opacity-70 cursor-pointer"
               >
                 {status === 'sending' ? <Loader2 className="animate-spin" size={22} /> : 'Enviar pedido'}
               </button>
@@ -399,7 +399,7 @@ const Orcamento = () => {
               <Phone size={18} className="text-brand-blue" aria-hidden="true" /> {CONTACT.phoneDisplay}
             </a>
             <a href={`mailto:${CONTACT.email}`} className="flex items-center gap-2 text-gray-800 hover:text-brand-blue break-all">
-              <Mail size={18} className="text-brand-pink shrink-0" aria-hidden="true" /> {CONTACT.email}
+              <Mail size={18} className="text-pink-ink shrink-0" aria-hidden="true" /> {CONTACT.email}
             </a>
           </div>
         </aside>

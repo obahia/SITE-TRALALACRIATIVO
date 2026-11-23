@@ -13,7 +13,19 @@
   --color-brand-pink: #ec4899;
   --color-brand-purple: #a855f7;
   --color-brand-yellow: #f7b731;
-  /* Adicionei o amarelo caso precise */
+
+  /* Catálogo de espécimes: tinta e três campos de cor para os blocos */
+  --color-ink: #16151a;
+  --color-ink-soft: #4b4954;
+  --color-paper: #ffffff;
+  --color-pink-ink: #be185d; /* rosa da marca escurecido: texto e botões com contraste AA */
+  --color-tile-sky: #d3ecfa;
+  --color-tile-rose: #fbd9e8;
+  --color-tile-sun: #fde9b0;
+
+  /* Movimento */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-soft: cubic-bezier(0.33, 1, 0.68, 1);
 
   /* --- FONTES --- */
   --font-sans: "Fredoka", sans-serif;
