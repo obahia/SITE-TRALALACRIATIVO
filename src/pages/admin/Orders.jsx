@@ -14,9 +14,28 @@ import {
   RefreshCw,
   CheckCircle,
   AlertCircle,
-  ChevronDown
+  ChevronDown,
+  Save,
+  Phone,
 } from 'lucide-react';
 import { supabase } from '../../services/supabase';
+
+const SHIPPING_METHOD_LABEL = {
+  ctt: 'CTT Expresso',
+  levantamento: 'Levantamento em Leiria',
+};
+
+// Envio com contrato CTT próprio (etiquetas feitas no portal CTT).
+const cttTrackingUrl = (code) =>
+  `https://appserver.ctt.pt/CustomerArea/PublicArea_Detail?ObjectCodeInput=${encodeURIComponent(code)}&SearchInput=${encodeURIComponent(code)}`;
+
+const shippingMethodLabel = (method) => SHIPPING_METHOD_LABEL[method] || method || null;
+
+const customerName = (order) =>
+  order.customer_name ||
+  [order.profiles?.first_name, order.profiles?.last_name].filter(Boolean).join(' ') ||
+  order.shipping_address?.name ||
+  '';
 
 const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
@@ -35,6 +54,13 @@ const AdminOrders = () => {
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [parcel, setParcel] = useState({ length: '20', width: '15', height: '10', weight: '0.5' });
   const [showParcelEdit, setShowParcelEdit] = useState(false);
+  const [showShippo, setShowShippo] = useState(false);
+
+  // Rastreio CTT manual
+  const [cttCode, setCttCode] = useState('');
+  const [cttUrl, setCttUrl] = useState('');
+  const [savingTracking, setSavingTracking] = useState(false);
+  const [trackingMessage, setTrackingMessage] = useState(null);
 
   useEffect(() => {
     fetchOrders();
@@ -49,8 +75,8 @@ const AdminOrders = () => {
 
       if (error) throw error;
       setOrders(data || []);
-    } catch (_error) {
-      // handled by state
+    } catch {
+      // Lista fica vazia; o admin pode recarregar a página.
     } finally {
       setLoading(false);
     }
@@ -64,8 +90,8 @@ const AdminOrders = () => {
         .eq('order_id', orderId);
       if (error) throw error;
       setOrderItems(data || []);
-    } catch (_error) {
-      // handled
+    } catch {
+      setOrderItems([]);
     }
   };
 
@@ -91,7 +117,48 @@ const AdminOrders = () => {
     setShipment(null);
     setSelectedRate(null);
     setTrackingInfo(null);
+    setShowShippo(false);
+    setCttCode(order.tracking_code || '');
+    // Se o link guardado é o gerado automaticamente, deixa o campo vazio para voltar a ser gerado.
+    setCttUrl(
+      order.tracking_url && order.tracking_url !== cttTrackingUrl(order.tracking_code || '')
+        ? order.tracking_url
+        : ''
+    );
+    setTrackingMessage(null);
+    setOrderItems([]);
     await fetchOrderItems(order.id);
+  };
+
+  const saveCttTracking = async (e) => {
+    e.preventDefault();
+    const code = cttCode.trim().toUpperCase();
+    if (!code) {
+      setTrackingMessage({ type: 'error', text: 'Indica o código de envio CTT.' });
+      return;
+    }
+    const url = cttUrl.trim() || cttTrackingUrl(code);
+    // Não volta a pôr "enviado" numa encomenda já entregue.
+    const status = selectedOrder.status === 'entregue' ? 'entregue' : 'enviado';
+
+    setSavingTracking(true);
+    setTrackingMessage(null);
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ tracking_code: code, tracking_url: url, status })
+        .eq('id', selectedOrder.id);
+      if (error) throw error;
+      const updated = { ...selectedOrder, tracking_code: code, tracking_url: url, status };
+      setSelectedOrder(updated);
+      setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+      setCttCode(code);
+      setTrackingMessage({ type: 'ok', text: 'Código guardado e encomenda marcada como enviada.' });
+    } catch (err) {
+      setTrackingMessage({ type: 'error', text: `Erro ao guardar: ${err.message || 'tenta outra vez'}` });
+    } finally {
+      setSavingTracking(false);
+    }
   };
 
   // --- Shippo helpers ---
@@ -208,10 +275,12 @@ const AdminOrders = () => {
   };
 
   const filteredOrders = orders.filter(order => {
+    const term = searchTerm.toLowerCase();
     const matchesSearch =
-      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      `${order.profiles?.first_name} ${order.profiles?.last_name}`.toLowerCase().includes(searchTerm.toLowerCase());
+      order.id.toLowerCase().includes(term) ||
+      order.profiles?.email?.toLowerCase().includes(term) ||
+      customerName(order).toLowerCase().includes(term) ||
+      (order.tracking_code || '').toLowerCase().includes(term);
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -228,7 +297,7 @@ const AdminOrders = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">Gerenciar Pedidos</h1>
+      <h1 className="text-2xl font-bold text-gray-800">Pedidos</h1>
 
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4">
@@ -236,7 +305,7 @@ const AdminOrders = () => {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
           <input
             type="text"
-            placeholder="Buscar por ID, email ou nome..."
+            placeholder="Pesquisar por ID, email, nome ou código CTT..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-brand-blue"
@@ -247,7 +316,7 @@ const AdminOrders = () => {
           onChange={(e) => setStatusFilter(e.target.value)}
           className="px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-brand-blue"
         >
-          <option value="all">Todos os status</option>
+          <option value="all">Todos os estados</option>
           {statusOptions.map(s => (
             <option key={s} value={s}>{capitalize(s)}</option>
           ))}
@@ -282,9 +351,7 @@ const AdminOrders = () => {
                     <td className="py-4 px-6 text-sm font-mono">#{order.id.slice(0, 8)}</td>
                     <td className="py-4 px-6">
                       <div>
-                        <p className="font-medium text-gray-800">
-                          {order.profiles?.first_name} {order.profiles?.last_name}
-                        </p>
+                        <p className="font-medium text-gray-800">{customerName(order) || '—'}</p>
                         <p className="text-sm text-gray-500">{order.profiles?.email}</p>
                       </div>
                     </td>
@@ -296,11 +363,20 @@ const AdminOrders = () => {
                       </span>
                     </td>
                     <td className="py-4 px-6">
-                      {order.label_url ? (
+                      {shippingMethodLabel(order.shipping_method) && (
+                        <span className="block text-xs text-gray-700 font-medium mb-0.5">
+                          {shippingMethodLabel(order.shipping_method)}
+                        </span>
+                      )}
+                      {order.tracking_code ? (
+                        <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                          <CheckCircle size={14} /> {order.tracking_code}
+                        </span>
+                      ) : order.label_url ? (
                         <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
                           <CheckCircle size={14} /> Etiqueta criada
                         </span>
-                      ) : order.shipping_address ? (
+                      ) : order.shipping_method === 'levantamento' ? null : order.shipping_address ? (
                         <span className="flex items-center gap-1 text-xs text-blue-600 font-medium">
                           <MapPin size={14} /> Morada disponível
                         </span>
@@ -311,6 +387,7 @@ const AdminOrders = () => {
                     <td className="py-4 px-6">
                       <button
                         onClick={() => openOrderDetails(order)}
+                        aria-label={`Ver pedido #${order.id.slice(0, 8)}`}
                         className="p-2 text-gray-500 hover:text-brand-blue hover:bg-blue-50 rounded-lg transition-colors"
                       >
                         <Eye size={18} />
@@ -338,6 +415,7 @@ const AdminOrders = () => {
               </div>
               <button
                 onClick={() => setSelectedOrder(null)}
+                aria-label="Fechar"
                 className="p-2 hover:bg-gray-100 rounded-lg"
               >
                 <XCircle size={24} className="text-gray-400" />
@@ -350,16 +428,31 @@ const AdminOrders = () => {
                 <h3 className="font-semibold mb-3 flex items-center gap-2">
                   <FileText size={18} /> Dados do Cliente
                 </h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-gray-500">Nome</p>
-                    <p className="font-medium">
-                      {selectedOrder.profiles?.first_name} {selectedOrder.profiles?.last_name}
-                    </p>
+                    <p className="font-medium">{customerName(selectedOrder) || '—'}</p>
                   </div>
                   <div>
                     <p className="text-gray-500">Email</p>
-                    <p className="font-medium">{selectedOrder.profiles?.email}</p>
+                    <p className="font-medium break-all">{selectedOrder.profiles?.email || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Telefone</p>
+                    {selectedOrder.customer_phone ? (
+                      <a
+                        href={`tel:${selectedOrder.customer_phone.replace(/\s/g, '')}`}
+                        className="font-medium text-brand-blue hover:underline inline-flex items-center gap-1"
+                      >
+                        <Phone size={14} /> {selectedOrder.customer_phone}
+                      </a>
+                    ) : (
+                      <p className="font-medium">—</p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Entrega</p>
+                    <p className="font-medium">{shippingMethodLabel(selectedOrder.shipping_method) || '—'}</p>
                   </div>
                 </div>
               </div>
@@ -383,7 +476,7 @@ const AdminOrders = () => {
                 </div>
               )}
 
-              {!selectedOrder.shipping_address && (
+              {!selectedOrder.shipping_address && selectedOrder.shipping_method !== 'levantamento' && (
                 <div className="bg-yellow-50 rounded-xl p-4 flex items-start gap-3">
                   <AlertCircle size={18} className="text-yellow-600 mt-0.5 shrink-0" />
                   <div className="text-sm text-yellow-800">
@@ -418,7 +511,15 @@ const AdminOrders = () => {
                     </div>
                   ))}
                 </div>
-                <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between">
+                <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between text-sm text-gray-600">
+                  <span>
+                    Envio{shippingMethodLabel(selectedOrder.shipping_method) ? ` (${shippingMethodLabel(selectedOrder.shipping_method)})` : ''}
+                  </span>
+                  <span className="font-medium">
+                    {Number(selectedOrder.shipping_amount) > 0 ? formatCurrency(selectedOrder.shipping_amount) : 'Grátis'}
+                  </span>
+                </div>
+                <div className="mt-2 flex justify-between">
                   <span className="font-semibold">Total</span>
                   <span className="text-xl font-bold text-brand-blue">
                     {formatCurrency(selectedOrder.total_amount)}
@@ -426,13 +527,98 @@ const AdminOrders = () => {
                 </div>
               </div>
 
-              {/* Shippo Section */}
+              {/* Envio CTT (contrato próprio) */}
               <div className="border border-gray-200 rounded-xl overflow-hidden">
                 <div className="bg-gray-50 px-4 py-3 flex items-center gap-2">
                   <Truck size={18} className="text-brand-blue" />
-                  <h3 className="font-semibold">Envio com Shippo</h3>
+                  <h3 className="font-semibold">Envio CTT</h3>
                 </div>
+                <div className="p-4 space-y-4">
+                  {selectedOrder.shipping_method === 'levantamento' && (
+                    <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
+                      O cliente escolheu levantamento em Leiria. Só precisas de código se acabares por enviar.
+                    </p>
+                  )}
 
+                  {selectedOrder.tracking_code && (
+                    <div className="flex flex-wrap items-center gap-3 text-sm">
+                      <span className="flex items-center gap-2">
+                        <Tag size={14} className="text-gray-400" />
+                        <span className="font-mono font-medium">{selectedOrder.tracking_code}</span>
+                      </span>
+                      {selectedOrder.tracking_url && (
+                        <a
+                          href={selectedOrder.tracking_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-brand-blue hover:underline"
+                        >
+                          <ExternalLink size={14} /> Ver rastreio
+                        </a>
+                      )}
+                    </div>
+                  )}
+
+                  <form onSubmit={saveCttTracking} className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label htmlFor="ctt-code" className="block text-xs text-gray-500 mb-1">Código CTT</label>
+                        <input
+                          id="ctt-code"
+                          type="text"
+                          value={cttCode}
+                          onChange={(e) => setCttCode(e.target.value)}
+                          placeholder="Ex: RR123456789PT"
+                          autoComplete="off"
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg font-mono focus:outline-none focus:border-brand-blue"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="ctt-url" className="block text-xs text-gray-500 mb-1">Link de rastreio (opcional)</label>
+                        <input
+                          id="ctt-url"
+                          type="url"
+                          value={cttUrl}
+                          onChange={(e) => setCttUrl(e.target.value)}
+                          placeholder="Vazio = página de seguimento CTT"
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-blue"
+                        />
+                      </div>
+                    </div>
+                    {trackingMessage && (
+                      <p
+                        role={trackingMessage.type === 'error' ? 'alert' : 'status'}
+                        className={`text-sm ${trackingMessage.type === 'error' ? 'text-red-600' : 'text-green-700'}`}
+                      >
+                        {trackingMessage.text}
+                      </p>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={savingTracking}
+                      className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-2.5 bg-brand-blue text-white rounded-xl font-medium text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+                    >
+                      {savingTracking ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                      Guardar
+                    </button>
+                    <p className="text-xs text-gray-400">Ao guardar, a encomenda passa a "Enviado".</p>
+                  </form>
+                </div>
+              </div>
+
+              {/* Shippo (alternativo) */}
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setShowShippo(!showShippo)}
+                  aria-expanded={showShippo}
+                  className="w-full bg-gray-50 px-4 py-3 flex items-center gap-2 text-left hover:bg-gray-100 transition-colors"
+                >
+                  <ChevronDown size={18} className={`text-gray-400 transition-transform ${showShippo ? 'rotate-180' : ''}`} />
+                  <h3 className="font-semibold text-gray-600">Envio com Shippo (alternativo)</h3>
+                </button>
+
+                {showShippo && (
                 <div className="p-4 space-y-4">
                   {/* Label already bought */}
                   {selectedOrder.label_url && (
@@ -615,11 +801,12 @@ const AdminOrders = () => {
                     </p>
                   )}
                 </div>
+                )}
               </div>
 
               {/* Update Status */}
               <div>
-                <h3 className="font-semibold mb-3">Atualizar Status</h3>
+                <h3 className="font-semibold mb-3">Atualizar estado</h3>
                 <div className="flex flex-wrap gap-2">
                   {statusOptions.map(status => (
                     <button

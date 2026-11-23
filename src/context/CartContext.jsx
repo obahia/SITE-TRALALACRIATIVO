@@ -45,6 +45,7 @@ export const CartProvider = ({ children }) => {
               price: item.price || item.product.price,
               image: item.product.image_url || item.product.image || '',
               quantity: item.quantity,
+              min_quantity: item.product.min_quantity || 1,
               customization: item.customization
             }));
             setCartItems(formattedItems);
@@ -104,6 +105,7 @@ export const CartProvider = ({ children }) => {
                 price: item.price || item.product.price,
                 image: item.product.image_url || item.product.image || '',
                 quantity: item.quantity,
+                min_quantity: item.product.min_quantity || 1,
                 customization: item.customization
               }));
               setCartItems(formattedUpdated);
@@ -215,7 +217,7 @@ export const CartProvider = ({ children }) => {
       if (!item) return prev;
 
       const newQuantity = item.quantity + amount;
-      if (newQuantity < 1) return prev;
+      if (newQuantity < (item.min_quantity || 1) || newQuantity > 1000) return prev;
 
       const updated = prev.map(i =>
         i.cartId === cartId ? { ...i, quantity: newQuantity } : i
@@ -268,7 +270,9 @@ export const CartProvider = ({ children }) => {
       setCheckoutError('');
 
       // Redirecionar para página de checkout
+      setIsCartOpen(false);
       navigate('/checkout');
+      setCheckoutLoading(false);
     } catch (err) {
       logger.error('Checkout error', { error: err.message });
       setCheckoutError(err.message || 'Erro ao processar pagamento. Por favor, tente novamente.');

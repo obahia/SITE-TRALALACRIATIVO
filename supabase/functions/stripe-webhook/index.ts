@@ -3,38 +3,93 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
   apiVersion: '2023-10-16',
+  httpClient: Stripe.createFetchHttpClient(),
 })
+
+// Deno só tem Web Crypto (assíncrono): a verificação da assinatura tem de usar
+// constructEventAsync com o SubtleCryptoProvider.
+const cryptoProvider = Stripe.createSubtleCryptoProvider()
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 )
 
+function jsonResponse(body: unknown, status: number) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
+// 'ctt' | 'levantamento' (metadata da shipping rate criada no checkout); fallback: display_name
+async function resolveShippingMethod(session: Stripe.Checkout.Session): Promise<string | null> {
+  const rate = session.shipping_cost?.shipping_rate
+  if (!rate) return null
+  try {
+    const shippingRate = typeof rate === 'string' ? await stripe.shippingRates.retrieve(rate) : rate
+    return shippingRate.metadata?.method || shippingRate.display_name || null
+  } catch (err) {
+    console.error('Falha ao obter a shipping rate:', err)
+    return null
+  }
+}
+
+function mapShippingAddress(session: Stripe.Checkout.Session) {
+  const details = session.shipping_details
+  const address = details?.address
+  if (!address) return null
+  return {
+    name: details?.name ?? session.customer_details?.name ?? null,
+    line1: address.line1 ?? null,
+    line2: address.line2 ?? null,
+    postal_code: address.postal_code ?? null,
+    city: address.city ?? null,
+    state: address.state ?? null,
+    country: address.country ?? null,
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 })
+  }
+
+  const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET')
+  if (!webhookSecret) {
+    console.error('STRIPE_WEBHOOK_SECRET não configurado')
+    return jsonResponse({ error: 'Webhook não configurado' }, 500)
   }
 
   const body = await req.text()
   const sig = req.headers.get('stripe-signature')
 
   if (!sig) {
-    return new Response(JSON.stringify({ error: 'Missing stripe-signature header' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    })
+    return jsonResponse({ error: 'Cabeçalho stripe-signature em falta' }, 400)
   }
 
   let event: Stripe.Event
 
   try {
-    event = stripe.webhooks.constructEvent(body, sig, Deno.env.get('STRIPE_WEBHOOK_SECRET') || '')
+    event = await stripe.webhooks.constructEventAsync(body, sig, webhookSecret, undefined, cryptoProvider)
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Invalid signature'
-    return new Response(JSON.stringify({ error: message }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    })
+    console.warn('Assinatura do webhook inválida:', err instanceof Error ? err.message : err)
+    return jsonResponse({ error: 'Assinatura inválida' }, 400)
+  }
+
+  // Sessão expirada sem pagamento: a encomenda pendente passa a cancelada.
+  if (event.type === 'checkout.session.expired') {
+    const session = event.data.object as Stripe.Checkout.Session
+    const orderId = session.metadata?.orderId
+    if (orderId) {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'cancelado' })
+        .eq('id', orderId)
+        .eq('status', 'pendente')
+      if (error) console.error('Falha ao cancelar encomenda expirada:', error.message)
+    }
+    return jsonResponse({ received: true }, 200)
   }
 
   // Handle checkout.session.completed
@@ -42,27 +97,48 @@ Deno.serve(async (req) => {
     const session = event.data.object as Stripe.Checkout.Session
     const orderId = session.metadata?.orderId
 
-    if (orderId) {
-      const { error } = await supabase
-        .from('orders')
-        .update({
-          status: 'pago',
-          stripe_session_id: session.id,
-        })
-        .eq('id', orderId)
+    if (!orderId) {
+      console.warn('checkout.session.completed sem orderId:', session.id)
+      return jsonResponse({ received: true }, 200)
+    }
 
-      if (error) {
-        console.error('Failed to update order:', error)
-        return new Response(JSON.stringify({ error: 'Failed to update order' }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' },
-        })
-      }
+    // Só cartão neste checkout; não marcar como pago se o pagamento não estiver concluído
+    if (session.payment_status !== 'paid' && session.payment_status !== 'no_payment_required') {
+      console.warn(`Sessão ${session.id} concluída sem pagamento (${session.payment_status})`)
+      return jsonResponse({ received: true }, 200)
+    }
+
+    const update: Record<string, unknown> = {
+      status: 'pago',
+      stripe_session_id: session.id,
+      shipping_amount: (session.shipping_cost?.amount_total ?? 0) / 100,
+      shipping_method: await resolveShippingMethod(session),
+      customer_phone: session.customer_details?.phone ?? null,
+      customer_name: session.customer_details?.name ?? null,
+      shipping_address: mapShippingAddress(session),
+    }
+    if (typeof session.amount_total === 'number') {
+      update.total_amount = session.amount_total / 100
+    }
+
+    // Idempotente: só atualiza encomendas ainda 'pendente' (um evento repetido
+    // não reescreve uma encomenda que o admin já passou para 'enviado').
+    const { data: updated, error } = await supabase
+      .from('orders')
+      .update(update)
+      .eq('id', orderId)
+      .eq('status', 'pendente')
+      .select('id')
+
+    if (error) {
+      console.error('Falha ao atualizar a encomenda:', error.message)
+      return jsonResponse({ error: 'Falha ao atualizar a encomenda' }, 500)
+    }
+
+    if (!updated || updated.length === 0) {
+      console.warn(`Encomenda ${orderId} não estava 'pendente' (evento repetido ou inexistente)`)
     }
   }
 
-  return new Response(JSON.stringify({ received: true }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  })
+  return jsonResponse({ received: true }, 200)
 })

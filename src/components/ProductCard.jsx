@@ -1,84 +1,86 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { Package } from 'lucide-react';
 import { formatPriceSimple } from '../utils/formatters';
 
-const ProductCard = ({ id, title, description, price, image, stockQuantity }) => {
+// Recebe a linha da tabela products tal como vem do Supabase.
+const ProductCard = ({ product }) => {
+  const {
+    id,
+    name,
+    description,
+    price,
+    image_url: image,
+    stock_quantity: stockQuantity,
+    min_quantity: minQuantity = 1,
+    sale_mode: saleMode = 'cart',
+    price_note: priceNote,
+  } = product;
+
   const esgotado = stockQuantity === 0;
+  const isQuote = saleMode === 'quote';
+  const unitPrice = Number(price);
+  const perUnit = minQuantity > 1;
+  const perLetter = priceNote === 'Preço por letra';
 
   return (
-    <motion.div
-      whileHover={{ y: esgotado ? 0 : -8 }}
-      transition={{ type: "spring", stiffness: 300 }}
-      className="group relative rounded-2xl bg-white p-1 h-full flex flex-col"
+    <Link
+      to={`/produto/${id}`}
+      aria-disabled={esgotado || undefined}
+      className={`group flex flex-col h-full bg-white rounded-3xl overflow-hidden border border-gray-100
+        shadow-[0_2px_6px_-2px_rgba(15,23,42,0.08)] hover:shadow-[0_18px_36px_-18px_rgba(15,23,42,0.35)]
+        hover:-translate-y-1 transition-[transform,box-shadow] duration-300 ease-out
+        ${esgotado ? 'pointer-events-none opacity-70' : ''}`}
     >
-      {/* Borda Gradiente */}
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-brand-blue via-brand-purple to-brand-pink opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10 blur-[2px]"></div>
-
-      <div className="relative h-full bg-white rounded-xl p-6 flex flex-col items-center text-center shadow-sm group-hover:shadow-card-hover transition-shadow duration-300">
-
-        {/* Imagem */}
-        <div className="w-full aspect-square bg-gradient-to-tr from-blue-50 to-pink-50 rounded-lg flex items-center justify-center mb-6 group-hover:scale-105 transition-transform duration-500 overflow-hidden relative shrink-0 z-0">
-          {image ? (
-            <img
-              src={image}
-              alt={title}
-              className={`w-full h-full object-cover object-center ${esgotado ? 'opacity-50 grayscale' : ''}`}
-              loading="lazy"
-              decoding="async"
-            />
-          ) : (
-            <>
-              <div className="absolute bg-brand-blue/10 w-32 h-32 rounded-full blur-2xl -top-10 -left-10 -z-10"></div>
-              <Package size={64} className="text-brand-blue/50 relative z-10" strokeWidth={1.5} />
-            </>
-          )}
-
-          {/* Badge Esgotado */}
-          {esgotado && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="bg-red-600 text-white font-bold text-sm px-4 py-1.5 rounded-full shadow-lg rotate-[-8deg] tracking-wide uppercase">
-                Esgotado
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* --- 2. TÍTULO PADRONIZADO (1 linha) --- */}
-        <h3
-          className="font-bold text-xl text-brand-dark mb-2 line-clamp-1 w-full"
-          title={title}
-        >
-          {title}
-        </h3>
-
-        {/* --- 3. DESCRIÇÃO PADRONIZADA (Altura fixa para 2 linhas) --- */}
-        <p className="text-sm text-gray-500 mb-6 leading-relaxed line-clamp-2 h-10 overflow-hidden w-full">
-          {description}
-        </p>
-
-        {/* --- 4. RODAPÉ (Preço e Botão) --- */}
-        <div className="mt-auto w-full">
-          <div className="text-2xl font-bold text-brand-blue mb-4">
-            {formatPriceSimple(price)}
+      <div className="relative aspect-[4/5] bg-brand-light overflow-hidden">
+        {image ? (
+          <img
+            src={image}
+            alt={name}
+            className={`w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04] ${esgotado ? 'grayscale' : ''}`}
+            loading="lazy"
+            decoding="async"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <Package size={56} className="text-brand-blue/40" strokeWidth={1.5} aria-hidden="true" />
           </div>
+        )}
+        {esgotado && (
+          <span className="absolute top-3 left-3 bg-gray-900 text-white font-bold text-xs px-3 py-1.5 rounded-full">
+            Esgotado
+          </span>
+        )}
+        {!esgotado && perUnit && (
+          <span className="absolute top-3 left-3 bg-white/95 text-gray-800 font-bold text-xs px-3 py-1.5 rounded-full shadow-sm">
+            Mín. {minQuantity} un.
+          </span>
+        )}
+      </div>
 
-          {esgotado ? (
-            <div className="block w-full py-3 px-6 bg-gray-200 text-gray-400 font-bold rounded-xl text-center cursor-not-allowed">
-              Produto Esgotado
-            </div>
+      <div className="flex flex-col flex-1 p-5">
+        <h3 className="font-bold text-lg leading-snug text-gray-900 group-hover:text-brand-blue transition-colors">{name}</h3>
+        {description && (
+          <p className="hidden sm:block text-sm text-gray-600 mt-1.5 leading-relaxed line-clamp-2">{description}</p>
+        )}
+        <div className="mt-auto pt-4 flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
+          {isQuote ? (
+            <span className="font-bold text-brand-pink">{priceNote || 'Sob orçamento'}</span>
           ) : (
-            <Link
-              to={`/produto/${id}`}
-              className="block w-full py-3 px-6 bg-gradient-to-r from-brand-pink to-brand-blue text-white font-bold rounded-xl shadow-md hover:shadow-glow-blue hover:scale-[1.02] active:scale-95 transition-all duration-300"
-            >
-              Personalizar Agora
-            </Link>
+            <span className="text-xl font-bold text-gray-900 tabular-nums">
+              {priceNote?.toLowerCase().startsWith('desde') ? 'Desde ' : ''}
+              {formatPriceSimple(unitPrice)}
+              {(perUnit || perLetter) && (
+                <span className="text-sm font-semibold text-gray-500">{perLetter ? ' /letra' : ' /un.'}</span>
+              )}
+            </span>
           )}
+          <span className="text-sm font-bold text-brand-blue shrink-0">
+            {isQuote ? 'Pedir orçamento' : 'Personalizar'}
+          </span>
         </div>
       </div>
-    </motion.div>
+    </Link>
   );
 };
 

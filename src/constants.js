@@ -4,7 +4,7 @@ export const APP_CONFIG = {
   CURRENCY_SYMBOL: '€',
 };
 
-export const CONTAINER_CLASS = 'container mx-auto px-8 md:px-16 lg:px-32';
+export const CONTAINER_CLASS = 'container mx-auto px-4 sm:px-8 md:px-12 xl:px-24';
 
 export const ORDER_STATUS_COLORS = {
   pendente: 'bg-yellow-100 text-yellow-800',

@@ -1,272 +1,381 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useRef, useEffect, useId } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Minus, Plus, Upload, ArrowLeft, X, Check, Loader2, Package, CalendarClock, Truck, ArrowRight } from 'lucide-react';
+
 import { supabase } from '../services/supabase';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { uploadCustomizationImage } from '../services/storage';
-import LoginModal from '../components/LoginModal';
-import { Minus, Plus, Upload, ArrowLeft, X, Check, ShieldCheck, MessageSquare, Edit3, ImageIcon, Loader2 } from 'lucide-react';
+import { OCCASION_BY_SLUG, SHIPPING } from '../data/occasions';
+import { CONTAINER_CLASS } from '../constants';
+import { formatPriceSimple } from '../utils/formatters';
+
+const MAX_QTY = 1000;
+
+const inputClass =
+  'w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 ' +
+  'focus:outline-none focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/15 transition';
 
 const ProdutoDetalhe = () => {
-    const { id } = useParams();
-    const navigate = useNavigate();
-    const { addToCart } = useCart();
-    const { user, isLoginModalOpen, setIsLoginModalOpen } = useAuth();
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const uid = useId();
+  const { addToCart } = useCart();
+  const { user, setIsLoginModalOpen } = useAuth();
 
-    const [product, setProduct] = useState(null);
-    const [loading, setLoading] = useState(true);
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-    const [quantity, setQuantity] = useState(1);
-    const [selectedOption, setSelectedOption] = useState(null);
-    const [uploadedImage, setUploadedImage] = useState(null);
-    const [instructions, setInstructions] = useState('');
-    const [uploading, setUploading] = useState(false);
-    const fileInputRef = useRef(null);
+  const [quantity, setQuantity] = useState(1);
+  const [quantityInput, setQuantityInput] = useState('1');
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [uploadedImage, setUploadedImage] = useState(null);
+  const [uploadError, setUploadError] = useState('');
+  const [details, setDetails] = useState({ nome: '', idade: '', tema: '', data: '' });
+  const [instructions, setInstructions] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
-    // --- 1. BUSCAR PRODUTO NO SUPABASE ---
-    useEffect(() => {
-        const fetchProduct = async () => {
-            setLoading(true);
-            const { data, error } = await supabase
-                .from('products')
-                .select('*')
-                .eq('id', id)
-                .single(); // Pega apenas um
+  useEffect(() => {
+    let cancelled = false;
+    const fetchProduct = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', id)
+        .eq('is_active', true)
+        .maybeSingle();
 
-             if (error || !data) {
-                 navigate('/produtos'); // Volta se der erro
-            } else {
-                setProduct(data);
-                // Define a primeira opção como padrão se existir
-                if (data.customization_options && data.customization_options.length > 0) {
-                    setSelectedOption(data.customization_options[0]);
-                }
-            }
-            setLoading(false);
-        };
-
-        fetchProduct();
-    }, [id, navigate]);
-
-    const handleImageUpload = async (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        if (file.size > 5 * 1024 * 1024) {
-            alert('Ficheiro demasiado grande. Máximo: 5MB');
-            return;
-        }
-
-        if (!user) {
-            setIsLoginModalOpen(true);
-            return;
-        }
-
-        setUploading(true);
-        const { data, error } = await uploadCustomizationImage(file, user.id);
-        setUploading(false);
-
-        if (error) {
-            alert('Erro ao enviar imagem: ' + error.message);
-            return;
-        }
-
-        setUploadedImage(data.publicUrl);
+      if (cancelled) return;
+      if (error || !data) {
+        navigate('/produtos', { replace: true });
+        return;
+      }
+      setProduct(data);
+      const min = data.min_quantity || 1;
+      setQuantity(min);
+      setQuantityInput(String(min));
+      setSelectedOption(data.customization_options?.[0] ?? null);
+      setLoading(false);
     };
+    fetchProduct();
+    return () => { cancelled = true; };
+  }, [id, navigate]);
 
-    const removeImage = (e) => { e.stopPropagation(); setUploadedImage(null); if (fileInputRef.current) fileInputRef.current.value = ""; };
-    const triggerFileInput = () => fileInputRef.current.click();
-    const handleDecrease = () => quantity > 1 && setQuantity(quantity - 1);
-    const handleIncrease = () => setQuantity(quantity + 1);
-
-    const handleAddToCart = () => {
-        if (!product) return;
-
-        // Usamos o preço da opção selecionada ou o preço base
-        const finalPrice = selectedOption ? selectedOption.price : product.price;
-
-        addToCart(
-            { ...product, price: finalPrice },
-            quantity,
-            {
-                uploadedImage,
-                instructions,
-                personalizationType: selectedOption?.label || 'Padrão'
-            }
-        );
-    };
-
-    // Preço unitário atual
-    const currentUnitPrice = selectedOption ? selectedOption.price : (product?.price || 0);
-
-    // Lógica para verificar se a opção exige/permite imagem (Vindo do Banco)
-    const isImageRequired = useMemo(() => {
-        return selectedOption?.allows_image === true;
-    }, [selectedOption]);
-
-    // Tela de Carregamento enquanto busca no banco
-    if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-brand-blue" size={40} /></div>;
-
-    if (!product) return null;
-
+  if (loading) {
     return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="container mx-auto px-8 md:px-16 lg:px-32 py-12">
-            <Link to="/produtos" className="inline-flex items-center gap-2 text-gray-500 hover:text-brand-blue mb-8 transition-colors font-medium">
-                <ArrowLeft size={20} /> Voltar para produtos
-            </Link>
-
-            <div className="flex flex-col lg:flex-row gap-12 lg:gap-20">
-
-                {/* LADO ESQUERDO: IMAGEM */}
-                <div className="flex-1">
-                    <div className="bg-white rounded-[2.5rem] shadow-xl border border-gray-100 overflow-hidden relative group h-[500px] lg:h-[600px] sticky top-8">
-                        <img
-                            src={product.image_url}
-                            alt={product.name}
-                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                        />
-                        <div className="absolute top-6 left-6 bg-white/90 backdrop-blur px-4 py-2 rounded-full text-xs font-bold text-gray-800 shadow-sm border border-gray-100 flex items-center gap-2">
-                            <ShieldCheck size={14} className="text-green-500" />
-                            <span>Qualidade Premium</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* LADO DIREITO */}
-                <div className="flex-1 flex flex-col justify-center space-y-8">
-                    <div>
-                        <h1 className="text-4xl md:text-5xl font-black text-gray-900 mb-4 tracking-tight">{product.name}</h1>
-                        <p className="text-gray-600 text-lg leading-relaxed mb-4">{product.description}</p>
-                        <div className="text-4xl font-bold text-brand-blue">
-                            {(currentUnitPrice * quantity).toFixed(2).replace('.', ',')} €
-                        </div>
-                    </div>
-
-                    {/* BOX DE PERSONALIZAÇÃO */}
-                    <div className="bg-white rounded-[2rem] shadow-xl border border-gray-100 p-6 md:p-8">
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-blue-50 text-brand-blue rounded-lg"><Edit3 size={20} /></div>
-                                <h3 className="text-xl font-bold text-gray-800">Personalize</h3>
-                            </div>
-                            <div className="flex items-center gap-3 bg-gray-50 p-1.5 rounded-xl border border-gray-100">
-                                <span className="text-xs font-bold text-gray-500 pl-2 uppercase tracking-wider">Qtd:</span>
-                                <div className="flex items-center bg-white rounded-lg shadow-sm border border-gray-100">
-                                    <button type="button" onClick={handleDecrease} disabled={quantity <= 1} className="w-9 h-9 flex items-center justify-center text-gray-500 hover:text-brand-pink active:scale-95 transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"><Minus size={16} /></button>
-                                    <span className="w-8 text-center font-bold text-gray-900 text-lg">{quantity}</span>
-                                    <button type="button" onClick={handleIncrease} className="w-9 h-9 flex items-center justify-center text-gray-500 hover:text-brand-blue active:scale-95 transition cursor-pointer"><Plus size={16} /></button>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* OPÇÕES DE PERSONALIZAÇÃO */}
-                        {product.customization_options && product.customization_options.length > 1 && (
-                            <div className="mb-8">
-                                <label className="text-sm font-bold text-gray-700 mb-4 block uppercase tracking-wider">
-                                    Escolha o Tipo de Personalização
-                                </label>
-                                <div className="grid grid-cols-1 gap-3">
-                                    {product.customization_options.map((option, index) => (
-                                        <button
-                                            key={index}
-                                            onClick={() => setSelectedOption(option)}
-                                            className={`flex justify-between items-center p-4 rounded-2xl border-2 transition-all duration-300 text-left cursor-pointer ${selectedOption?.label === option.label
-                                                ? 'border-brand-blue bg-blue-50/50 shadow-md ring-4 ring-blue-50/20'
-                                                : 'border-gray-100 hover:border-gray-200 bg-white'
-                                                }`}
-                                        >
-                                            <div className="flex-1 pr-4">
-                                                <span className={`font-bold transition-colors ${selectedOption?.label === option.label ? 'text-brand-blue' : 'text-gray-700'}`}>
-                                                    {option.label}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center gap-4 shrink-0">
-                                                <span className="font-bold text-gray-900">{option.price.toFixed(2).replace('.', ',')}€</span>
-                                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedOption?.label === option.label
-                                                    ? 'bg-brand-blue border-brand-blue shadow-sm'
-                                                    : 'border-gray-300'
-                                                    }`}>
-                                                    {selectedOption?.label === option.label && <Check size={14} className="text-white" />}
-                                                </div>
-                                            </div>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Upload e Texto */}
-                        <div className={`mb-8 transition-all duration-300 ${!isImageRequired ? 'opacity-50 grayscale' : 'opacity-100'}`}>
-                            <label className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                                <ImageIcon size={16} className="text-gray-400" />
-                                <span>{isImageRequired ? 'Envie sua arte (Opcional)' : 'Imagem não disponível para esta opção'}</span>
-                                {uploadedImage && isImageRequired && <span className="ml-auto text-green-600 text-xs bg-green-50 px-2 py-1 rounded-md flex items-center gap-1"><Check size={12} /> Anexado</span>}
-                            </label>
-                            <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
-                            <div
-                                onClick={isImageRequired ? triggerFileInput : undefined}
-                                className={`relative h-32 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center transition-all overflow-hidden group ${!isImageRequired ? 'bg-gray-100 border-gray-200 cursor-not-allowed' :
-                                    uploadedImage ? 'border-brand-blue bg-blue-50/20 cursor-pointer' :
-                                        'border-gray-200 hover:border-brand-blue hover:bg-gray-50 cursor-pointer'
-                                    }`}
-                            >
-                                {uploading ? (
-                                    <div className="flex flex-col items-center gap-3">
-                                        <Loader2 className="animate-spin text-brand-blue" size={32} />
-                                        <span className="text-sm text-gray-600 font-medium">A enviar imagem...</span>
-                                    </div>
-                                ) : uploadedImage && isImageRequired ? (
-                                    <div className="flex items-center gap-4 p-4 w-full h-full">
-                                        <div className="h-full aspect-square rounded-xl overflow-hidden border border-gray-200 bg-white shadow-sm"><img src={uploadedImage} alt="Upload" className="w-full h-full object-cover" /></div>
-                                        <div className="flex-1">
-                                            <p className="font-bold text-gray-800 text-sm">Imagem recebida!</p>
-                                            <button onClick={removeImage} className="mt-2 text-red-500 text-xs font-bold hover:text-red-700 bg-white border border-gray-200 px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1 shadow-sm hover:bg-red-50 cursor-pointer"><X size={14} /> Remover</button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col items-center p-4 text-center">
-                                        <Upload size={24} className="text-gray-400 group-hover:text-brand-blue mb-2 transition-colors" />
-                                        <span className="text-gray-500 font-medium text-sm group-hover:text-brand-blue transition-colors px-4">
-                                            {isImageRequired ? 'Clique para carregar imagem' : 'Esta opção utiliza apenas texto'}
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="w-full h-px bg-gray-100 mb-8"></div>
-
-                        <div>
-                            <label className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                                <MessageSquare size={16} className="text-gray-400" />
-                                <span>Instruções Especiais</span>
-                            </label>
-                            <textarea
-                                value={instructions}
-                                onChange={(e) => setInstructions(e.target.value)}
-                                placeholder="Ex: Nome, frase, cor..."
-                                className="w-full h-28 p-4 bg-gray-50 border border-gray-200 rounded-2xl text-gray-700 placeholder-gray-400 focus:outline-none focus:border-brand-blue focus:bg-white focus:ring-4 focus:ring-blue-50/50 transition-all resize-none text-sm leading-relaxed"
-                            />
-                        </div>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={handleAddToCart}
-                        className="w-full bg-gray-900 text-white text-lg font-bold py-5 rounded-2xl shadow-xl hover:bg-black hover:scale-[1.01] transition-all active:scale-95 cursor-pointer"
-                    >
-                        Adicionar ao Carrinho
-                    </button>
-                </div>
-            </div>
-
-            <LoginModal 
-                isOpen={isLoginModalOpen} 
-                onClose={() => setIsLoginModalOpen(false)} 
-            />
-        </motion.div>
+      <div className="h-[70vh] flex items-center justify-center">
+        <Loader2 className="animate-spin text-brand-blue" size={40} aria-label="A carregar" />
+      </div>
     );
+  }
+  if (!product) return null;
+
+  const minQty = product.min_quantity || 1;
+  const soldOut = product.stock_quantity === 0;
+  const isQuote = product.sale_mode === 'quote';
+  const allowsImage = selectedOption?.allows_image === true;
+  const unitPrice = Number(selectedOption ? selectedOption.price : product.price);
+  const perLetter = product.price_note === 'Preço por letra';
+  const occasionNames = (product.occasions || []).map((slug) => OCCASION_BY_SLUG[slug]?.name).filter(Boolean);
+
+  const commitQuantity = (value) => {
+    const n = Math.min(MAX_QTY, Math.max(minQty, Number.parseInt(value, 10) || minQty));
+    setQuantity(n);
+    setQuantityInput(String(n));
+  };
+
+  const handleImageUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploadError('');
+
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('A imagem tem mais de 5 MB. Escolha uma mais pequena.');
+      return;
+    }
+    if (!user) {
+      setUploadError('Entre na sua conta para enviar imagens.');
+      setIsLoginModalOpen(true);
+      return;
+    }
+
+    setUploading(true);
+    const { data, error } = await uploadCustomizationImage(file, user.id);
+    setUploading(false);
+
+    if (error) {
+      setUploadError(`Não foi possível enviar a imagem: ${error.message}`);
+      return;
+    }
+    setUploadedImage(data.publicUrl);
+  };
+
+  const removeImage = () => {
+    setUploadedImage(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleAddToCart = () => {
+    const summary = [
+      details.nome && `Nome: ${details.nome.trim()}`,
+      details.idade && `Idade: ${details.idade.trim()}`,
+      details.tema && `Tema/cores: ${details.tema.trim()}`,
+      details.data && `Data da festa: ${details.data}`,
+    ].filter(Boolean).join(' · ');
+
+    addToCart(
+      { ...product, price: unitPrice },
+      quantity,
+      {
+        uploadedImage: allowsImage ? uploadedImage : null,
+        instructions: [summary, instructions.trim()].filter(Boolean).join('\n'),
+        personalizationType: selectedOption?.label || 'Padrão',
+      }
+    );
+  };
+
+  const setDetail = (key) => (e) => setDetails((d) => ({ ...d, [key]: e.target.value }));
+  const options = product.customization_options || [];
+
+  return (
+    <div className={`${CONTAINER_CLASS} py-8 md:py-12`}>
+      <Link to="/produtos" className="inline-flex items-center gap-2 text-gray-600 hover:text-brand-blue mb-6 font-semibold">
+        <ArrowLeft size={18} /> Voltar à loja
+      </Link>
+
+      <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-start">
+        {/* IMAGEM */}
+        <div className="lg:sticky lg:top-28">
+          <div className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden aspect-[4/5] shadow-[0_18px_40px_-24px_rgba(15,23,42,0.4)]">
+            {product.image_url ? (
+              <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-brand-light">
+                <Package size={72} className="text-brand-blue/40" strokeWidth={1.5} aria-hidden="true" />
+              </div>
+            )}
+          </div>
+          {occasionNames.length > 0 && (
+            <p className="mt-4 text-sm text-gray-600">
+              Ideal para: <span className="font-semibold text-gray-800">{occasionNames.join(', ')}</span>
+            </p>
+          )}
+        </div>
+
+        {/* INFO */}
+        <div>
+          {product.category && <p className="text-sm font-semibold text-brand-blue mb-2">{product.category}</p>}
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 tracking-[-0.02em] text-balance">{product.name}</h1>
+          <p className="mt-4 text-gray-700 text-lg leading-relaxed">{product.description}</p>
+
+          {isQuote ? (
+            <div className="mt-8 rounded-3xl bg-white border border-gray-100 p-6 md:p-8">
+              <p className="text-2xl font-bold text-brand-pink">{product.price_note || 'Sob orçamento'}</p>
+              <p className="mt-2 text-gray-700">
+                O preço depende do tamanho, do modelo e da quantidade. Diga-nos o que precisa e enviamos o valor certo.
+              </p>
+              <Link
+                to={`/orcamento?produto=${encodeURIComponent(product.name)}${product.occasions?.[0] ? `&ocasiao=${product.occasions[0]}` : ''}`}
+                className="mt-6 inline-flex w-full items-center justify-center gap-2 bg-brand-pink text-white text-lg font-bold h-14 rounded-2xl hover:brightness-110 transition"
+              >
+                Pedir orçamento <ArrowRight size={20} />
+              </Link>
+            </div>
+          ) : (
+            <>
+              <div className="mt-6 flex items-baseline flex-wrap gap-x-3 gap-y-1">
+                <span className="text-4xl font-bold text-gray-900 tabular-nums">{formatPriceSimple(unitPrice * quantity)}</span>
+                <span className="text-gray-600 tabular-nums">
+                  {quantity} × {formatPriceSimple(unitPrice)}{perLetter ? ' por letra' : ''}
+                </span>
+              </div>
+              {minQty > 1 && (
+                <p className="mt-1 text-sm font-semibold text-gray-700">Encomenda mínima: {minQty} unidades.</p>
+              )}
+
+              <div className="mt-8 rounded-3xl bg-white border border-gray-100 p-6 md:p-8 space-y-7">
+                {/* Quantidade */}
+                <div className="flex items-center justify-between gap-4">
+                  <label htmlFor={`${uid}-qty`} className="font-bold text-gray-900">
+                    {perLetter ? 'Número de letras' : 'Quantidade'}
+                  </label>
+                  <div className="flex items-center rounded-xl border border-gray-300 bg-white">
+                    <button
+                      type="button"
+                      onClick={() => commitQuantity(quantity - 1)}
+                      disabled={quantity <= minQty}
+                      aria-label="Diminuir quantidade"
+                      className="w-11 h-11 flex items-center justify-center text-gray-700 disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                    >
+                      <Minus size={18} />
+                    </button>
+                    <input
+                      id={`${uid}-qty`}
+                      type="text"
+                      inputMode="numeric"
+                      value={quantityInput}
+                      onChange={(e) => setQuantityInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                      onBlur={(e) => commitQuantity(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') commitQuantity(e.currentTarget.value); }}
+                      className="w-16 h-11 text-center font-bold text-lg text-gray-900 tabular-nums border-x border-gray-200 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => commitQuantity(quantity + 1)}
+                      disabled={quantity >= MAX_QTY}
+                      aria-label="Aumentar quantidade"
+                      className="w-11 h-11 flex items-center justify-center text-gray-700 disabled:opacity-30 cursor-pointer"
+                    >
+                      <Plus size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Opções (ex.: tamanho do display) */}
+                {options.length > 1 && (
+                  <fieldset>
+                    <legend className="font-bold text-gray-900 mb-3">Escolha a opção</legend>
+                    <div className="grid gap-2.5">
+                      {options.map((option) => {
+                        const active = selectedOption?.label === option.label;
+                        return (
+                          <button
+                            key={option.label}
+                            type="button"
+                            role="radio"
+                            aria-checked={active}
+                            onClick={() => setSelectedOption(option)}
+                            className={`flex justify-between items-center p-4 rounded-2xl border-2 text-left transition-colors cursor-pointer ${
+                              active ? 'border-brand-blue bg-brand-blue/5' : 'border-gray-200 hover:border-gray-300 bg-white'
+                            }`}
+                          >
+                            <span className={`font-bold ${active ? 'text-brand-blue' : 'text-gray-800'}`}>{option.label}</span>
+                            <span className="flex items-center gap-3">
+                              <span className="font-bold text-gray-900 tabular-nums">{formatPriceSimple(Number(option.price))}</span>
+                              <span className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${active ? 'bg-brand-blue border-brand-blue' : 'border-gray-300'}`}>
+                                {active && <Check size={14} className="text-white" />}
+                              </span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+                )}
+
+                {/* Personalização */}
+                <fieldset className="space-y-4">
+                  <legend className="font-bold text-gray-900 mb-1">Personalização</legend>
+                  <p className="text-sm text-gray-600 -mt-1">Enviamos a arte para aprovar antes de produzir.</p>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor={`${uid}-nome`} className="block text-sm font-semibold text-gray-700 mb-1.5">Nome a colocar</label>
+                      <input id={`${uid}-nome`} className={inputClass} value={details.nome} onChange={setDetail('nome')} maxLength={60} placeholder="ex.: Leonor" />
+                    </div>
+                    <div>
+                      <label htmlFor={`${uid}-idade`} className="block text-sm font-semibold text-gray-700 mb-1.5">Idade ou data</label>
+                      <input id={`${uid}-idade`} className={inputClass} value={details.idade} onChange={setDetail('idade')} maxLength={40} placeholder="ex.: 3 anos" />
+                    </div>
+                    <div>
+                      <label htmlFor={`${uid}-tema`} className="block text-sm font-semibold text-gray-700 mb-1.5">Tema e cores</label>
+                      <input id={`${uid}-tema`} className={inputClass} value={details.tema} onChange={setDetail('tema')} maxLength={120} placeholder="ex.: Safari, verde e bege" />
+                    </div>
+                    <div>
+                      <label htmlFor={`${uid}-data`} className="block text-sm font-semibold text-gray-700 mb-1.5">Data da festa</label>
+                      <input id={`${uid}-data`} type="date" className={inputClass} value={details.data} onChange={setDetail('data')} />
+                    </div>
+                  </div>
+
+                  {allowsImage && (
+                    <div>
+                      <p className="block text-sm font-semibold text-gray-700 mb-1.5">Imagem de referência (opcional)</p>
+                      <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="sr-only" id={`${uid}-file`} />
+                      {uploadedImage ? (
+                        <div className="flex items-center gap-4 p-3 rounded-2xl border border-brand-blue/40 bg-brand-blue/5">
+                          <img src={uploadedImage} alt="Imagem enviada" className="w-16 h-16 rounded-xl object-cover border border-gray-200" />
+                          <div className="flex-1">
+                            <p className="font-semibold text-gray-800 text-sm">Imagem recebida</p>
+                            <button type="button" onClick={removeImage} className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-red-700 cursor-pointer">
+                              <X size={14} /> Remover
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <label
+                          htmlFor={`${uid}-file`}
+                          className="flex items-center justify-center gap-2 h-20 rounded-2xl border-2 border-dashed border-gray-300 text-gray-700 font-semibold hover:border-brand-blue hover:text-brand-blue transition-colors cursor-pointer focus-within:ring-4 focus-within:ring-brand-blue/30"
+                        >
+                          {uploading ? <Loader2 className="animate-spin" size={20} /> : <Upload size={20} aria-hidden="true" />}
+                          {uploading ? 'A enviar…' : 'Carregar imagem (até 5 MB)'}
+                        </label>
+                      )}
+                      {uploadError && <p className="mt-1.5 text-sm font-semibold text-red-700">{uploadError}</p>}
+                    </div>
+                  )}
+
+                  <div>
+                    <label htmlFor={`${uid}-notas`} className="block text-sm font-semibold text-gray-700 mb-1.5">Mais algum pormenor?</label>
+                    <textarea
+                      id={`${uid}-notas`}
+                      value={instructions}
+                      onChange={(e) => setInstructions(e.target.value)}
+                      maxLength={1000}
+                      rows={3}
+                      placeholder="Frase, personagem, cores a evitar…"
+                      className={`${inputClass} resize-y`}
+                    />
+                  </div>
+                </fieldset>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={soldOut}
+                className="mt-6 w-full bg-gray-900 text-white text-lg font-bold h-16 rounded-2xl hover:bg-black transition active:scale-[0.99] cursor-pointer disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed"
+              >
+                {soldOut ? 'Esgotado' : `Adicionar ao carrinho · ${formatPriceSimple(unitPrice * quantity)}`}
+              </button>
+              {soldOut && (
+                <p className="mt-3 text-sm text-gray-700">
+                  Este produto está esgotado.{' '}
+                  <Link to={`/orcamento?produto=${encodeURIComponent(product.name)}`} className="font-bold text-brand-pink underline">
+                    Pergunte-nos quando volta
+                  </Link>.
+                </p>
+              )}
+
+              {quantity >= 100 && (
+                <p className="mt-3 text-sm text-gray-700">
+                  Para {quantity} unidades ou mais,{' '}
+                  <Link to={`/orcamento?produto=${encodeURIComponent(product.name)}`} className="font-bold text-brand-pink underline">
+                    peça orçamento
+                  </Link>{' '}
+                  e conseguimos um preço melhor.
+                </p>
+              )}
+            </>
+          )}
+
+          <ul className="mt-8 space-y-3 text-gray-700">
+            <li className="flex gap-3">
+              <CalendarClock size={20} className="text-brand-blue shrink-0 mt-0.5" aria-hidden="true" />
+              <span>Feito à mão depois de aprovar a arte. Encomende com 2 a 4 semanas de antecedência.</span>
+            </li>
+            <li className="flex gap-3">
+              <Truck size={20} className="text-brand-blue shrink-0 mt-0.5" aria-hidden="true" />
+              <span>
+                CTT {formatPriceSimple(SHIPPING.cttPrice)}, grátis acima de {SHIPPING.freeFrom} €. Levantamento grátis em Leiria.{' '}
+                <Link to="/informacoes" className="font-semibold text-brand-blue underline underline-offset-2">Saber mais</Link>
+              </span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default ProdutoDetalhe;

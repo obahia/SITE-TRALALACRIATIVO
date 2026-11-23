@@ -106,7 +106,7 @@ const CartSidebar = () => {
                           <button
                             onClick={() => updateQuantity(item.cartId, -1)}
                             className="w-6 h-6 flex items-center justify-center bg-white rounded shadow-sm text-gray-600 hover:text-brand-pink active:scale-95 transition cursor-pointer"
-                            disabled={item.quantity <= 1} // Desabilita se for 1
+                            disabled={item.quantity <= (item.min_quantity || 1)} // Não desce abaixo do mínimo do produto
                           >
                             <Minus size={12} />
                           </button>

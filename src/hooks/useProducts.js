@@ -2,40 +2,71 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 
 export const useProducts = (options = {}) => {
-  const { limit = null, orderBy = 'created_at', ascending = false } = options;
+  const {
+    limit = null,
+    orderBy = 'created_at',
+    ascending = false,
+    occasion = null, // slug de src/data/occasions.js
+    featuredOnly = false,
+  } = options;
   
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    let cancelled = false;
     const fetchProducts = async () => {
       try {
         setLoading(true);
+        setError(null);
         let query = supabase
           .from('products')
           .select('*')
           .eq('is_active', true)
           .order(orderBy, { ascending });
 
+        if (occasion) {
+          query = query.contains('occasions', [occasion]);
+        }
+
+        if (featuredOnly) {
+          query = query.eq('is_featured', true);
+        }
+
         if (limit) {
           query = query.limit(limit);
         }
 
-        const { data, error: fetchError } = await query;
+        let { data, error: fetchError } = await query;
+
+        // 42703 = coluna inexistente: a migração 020 ainda não foi aplicada.
+        // Mostra o catálogo antigo em vez de uma página vazia.
+        if (fetchError?.code === '42703') {
+          const fallback = await supabase
+            .from('products')
+            .select('*')
+            .eq('is_active', true)
+            .order('created_at', { ascending: false });
+          fetchError = fallback.error;
+          // Sem as colunas novas não há destaques nem ocasiões: listas vazias escondem essas secções.
+          data = featuredOnly || occasion ? [] : (fallback.data || []);
+          if (limit) data = data.slice(0, limit);
+        }
 
         if (fetchError) throw fetchError;
 
-        setProducts(data || []);
+        if (!cancelled) setProducts(data || []);
        } catch (err) {
-         setError(err.message);
+         if (!cancelled) setError(err.message);
        } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchProducts();
-  }, [limit, orderBy, ascending]);
+    return () => { cancelled = true; };
+  }, [limit, orderBy, ascending, occasion, featuredOnly]);
 
   return { products, loading, error };
 };

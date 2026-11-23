@@ -1,5 +1,5 @@
 // src/App.jsx
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { AuthProvider } from './context/AuthContext';
@@ -30,6 +30,10 @@ const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
 const AdminOrders = lazy(() => import('./pages/admin/Orders'));
 const AdminProducts = lazy(() => import('./pages/admin/Products'));
 const AdminUsers = lazy(() => import('./pages/admin/Users'));
+const AdminQuotes = lazy(() => import('./pages/admin/Quotes'));
+const Ocasiao = lazy(() => import('./pages/Ocasiao'));
+const Orcamento = lazy(() => import('./pages/Orcamento'));
+const Informacoes = lazy(() => import('./pages/Informacoes'));
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center h-screen">
@@ -40,6 +44,18 @@ const LoadingFallback = () => (
 const AnimatedRoutes = () => {
   const location = useLocation();
 
+  // Nova página começa no topo; links com #secção descem até à secção.
+  useEffect(() => {
+    if (location.hash) {
+      const timer = setTimeout(() => {
+        document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView({ behavior: 'smooth' });
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+    window.scrollTo(0, 0);
+    return undefined;
+  }, [location.pathname, location.hash]);
+
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
@@ -48,6 +64,9 @@ const AnimatedRoutes = () => {
         <Route path="/sobre" element={<Suspense fallback={<LoadingFallback />}><Sobre /></Suspense>} />
         <Route path="/localizacao" element={<Suspense fallback={<LoadingFallback />}><Localizacao /></Suspense>} />
         <Route path="/produto/:id" element={<Suspense fallback={<LoadingFallback />}><ProdutoDetalhe /></Suspense>} />
+        <Route path="/ocasioes/:slug" element={<Suspense fallback={<LoadingFallback />}><Ocasiao /></Suspense>} />
+        <Route path="/orcamento" element={<Suspense fallback={<LoadingFallback />}><Orcamento key={location.search} /></Suspense>} />
+        <Route path="/informacoes" element={<Suspense fallback={<LoadingFallback />}><Informacoes /></Suspense>} />
         <Route
           path="/checkout"
           element={
@@ -115,6 +134,19 @@ const AnimatedRoutes = () => {
               <AdminLayout>
                 <Suspense fallback={<LoadingFallback />}>
                   <AdminUsers />
+                </Suspense>
+              </AdminLayout>
+            </ProtectedAdminRoute>
+          }
+        />
+
+        <Route
+          path="/admin/orcamentos"
+          element={
+            <ProtectedAdminRoute>
+              <AdminLayout>
+                <Suspense fallback={<LoadingFallback />}>
+                  <AdminQuotes />
                 </Suspense>
               </AdminLayout>
             </ProtectedAdminRoute>

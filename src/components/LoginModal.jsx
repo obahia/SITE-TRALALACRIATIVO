@@ -1,447 +1,417 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Lock, Loader2, User, Sparkles, Eye, EyeOff } from 'lucide-react';
+import React, { useEffect, useId, useRef, useState } from 'react';
+import { X, Mail, Lock, Loader2, User, Sparkles, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { isValidEmail, isValidPassword, isValidName } from '../utils/validation';
+import { describeAuthError } from '../utils/authErrors';
 import { logger } from '../utils/logger';
 
+const EMPTY_FORM = { email: '', password: '', firstName: '', lastName: '', confirmPassword: '' };
+
+const inputClass =
+  'w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 placeholder-gray-500 ' +
+  'focus:outline-none focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/15 transition';
+
+const GoogleIcon = () => (
+  <svg viewBox="0 0 48 48" className="w-5 h-5" aria-hidden="true">
+    <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z" />
+    <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
+    <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.3 0-9.7-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z" />
+    <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z" />
+  </svg>
+);
+
+const Field = ({ id, label, icon, children }) => {
+  const Icon = icon;
+  return (
+  <div>
+    <label htmlFor={id} className="block text-sm font-semibold text-gray-700 mb-1.5">{label}</label>
+    <div className="relative">
+      <Icon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} aria-hidden="true" />
+      {children}
+    </div>
+  </div>
+  );
+};
+
+const PasswordToggle = ({ shown, onToggle }) => (
+  <button
+    type="button"
+    onClick={onToggle}
+    aria-label={shown ? 'Esconder palavra-passe' : 'Mostrar palavra-passe'}
+    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-500 hover:text-gray-700 rounded-lg cursor-pointer focus-visible:outline-2 focus-visible:outline-brand-blue"
+  >
+    {shown ? <EyeOff size={18} /> : <Eye size={18} />}
+  </button>
+);
+
 const LoginModal = ({ isOpen, onClose }) => {
-  const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
+  const { signIn, signUp, signInWithGoogle, resetPassword, resendConfirmation } = useAuth();
+  const uid = useId();
+  const dialogRef = useRef(null);
 
-  const [isRegistering, setIsRegistering] = useState(false);
+  // 'login' | 'register' | 'forgot'
+  const [view, setView] = useState('login');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [isForgotPassword, setIsForgotPassword] = useState(false);
-  const [resetEmail, setResetEmail] = useState('');
-  const [resetSuccess, setResetSuccess] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
+  const [error, setError] = useState(null); // { kind, message }
+  const [notice, setNotice] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [passwordError, setPasswordError] = useState('');
+  const [form, setForm] = useState(EMPTY_FORM);
 
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    firstName: '',
-    lastName: '',
-    confirmPassword: '',
-  });
+  const isRegistering = view === 'register';
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setPasswordError('');
-
-    try {
-      if (isRegistering) {
-        // Validate email
-        if (!isValidEmail(formData.email)) {
-          throw new Error('Email inválido');
-        }
-
-        // Validate names
-        if (!isValidName(formData.firstName)) {
-          throw new Error('Nome inválido');
-        }
-        if (!isValidName(formData.lastName)) {
-          throw new Error('Apelido inválido');
-        }
-
-        // Validate password
-        if (!isValidPassword(formData.password)) {
-          setPasswordError('A palavra-passe deve ter pelo menos 6 caracteres');
-          setLoading(false);
-          return;
-        }
-
-        if (formData.password !== formData.confirmPassword) {
-          setPasswordError('As palavras-passe não coincidem');
-          setLoading(false);
-          return;
-        }
-
-        await signUp(
-          formData.email,
-          formData.password,
-          formData.firstName,
-          formData.lastName
-        );
-
-        setSuccessMessage('Conta criada com sucesso! Verifica o teu email para confirmar a conta.');
-        setTimeout(() => {
-          setSuccessMessage('');
-          onClose();
-        }, 3000);
-      } else {
-        // Validate email for login
-        if (!isValidEmail(formData.email)) {
-          throw new Error('Email inválido');
-        }
-
-        await signIn(formData.email, formData.password);
-        onClose();
-      }
-    } catch (err) {
-      const errorMessage = err.message || 'Erro ao autenticar';
-      setError(errorMessage);
-      logger.error('Auth error', { type: isRegistering ? 'signup' : 'signin', error: errorMessage });
-    } finally {
-      setLoading(false);
-    }
+  const setField = (key) => (e) => {
+    setForm((prev) => ({ ...prev, [key]: e.target.value }));
+    if (error) setError(null);
   };
 
-  const handleResetPassword = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setResetSuccess('');
-
-    try {
-      if (!resetEmail) {
-        throw new Error('Preenche o email');
-      }
-
-      await resetPassword(resetEmail);
-      setResetSuccess(`Link de recuperacao enviado para ${resetEmail}`);
-      setResetEmail('');
-      setTimeout(() => {
-        setIsForgotPassword(false);
-        setResetSuccess('');
-      }, 3000);
-    } catch (err) {
-      setError(err.message || 'Erro ao enviar link de recuperação');
-    } finally {
-      setLoading(false);
-    }
+  const goTo = (next) => {
+    setView(next);
+    setError(null);
+    setNotice('');
+    setShowPassword(false);
   };
 
   const handleClose = () => {
-    setError('');
-    setResetSuccess('');
-    setSuccessMessage('');
-    setPasswordError('');
-    setIsForgotPassword(false);
-    setResetEmail('');
-    setFormData({ email: '', password: '', firstName: '', lastName: '', confirmPassword: '' });
+    setView('login');
+    setError(null);
+    setNotice('');
+    setShowPassword(false);
+    setForm(EMPTY_FORM);
     onClose();
+  };
+
+  // Escape fecha; foco entra no diálogo ao abrir.
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') handleClose(); };
+    document.addEventListener('keydown', onKey);
+    const firstInput = dialogRef.current?.querySelector('input');
+    firstInput?.focus();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = previousOverflow;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, view]);
+
+  const fail = (err, context) => {
+    const described = describeAuthError(err);
+    setError(described);
+    logger.error('Auth error', { context, code: err?.code, error: err?.message });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setNotice('');
+
+    if (!isValidEmail(form.email.trim())) {
+      setError({ kind: 'email_invalid', message: 'Escreva um email válido, por exemplo nome@gmail.com.' });
+      return;
+    }
+
+    if (isRegistering) {
+      if (!isValidName(form.firstName) || !isValidName(form.lastName)) {
+        setError({ kind: 'name', message: 'Preencha o nome e o apelido.' });
+        return;
+      }
+      if (!isValidPassword(form.password)) {
+        setError({ kind: 'weak_password', message: 'A palavra-passe precisa de pelo menos 6 caracteres.' });
+        return;
+      }
+      if (form.password !== form.confirmPassword) {
+        setError({ kind: 'mismatch', message: 'As duas palavras-passe não são iguais.' });
+        return;
+      }
+    }
+
+    setLoading(true);
+    try {
+      if (isRegistering) {
+        await signUp(form.email, form.password, form.firstName, form.lastName);
+        setForm((prev) => ({ ...EMPTY_FORM, email: prev.email }));
+        setView('login');
+        setNotice('Conta criada. Enviámos um email de confirmação: abra o link e depois entre aqui. Se não o encontrar, veja o spam.');
+      } else {
+        await signIn(form.email, form.password);
+        handleClose();
+      }
+    } catch (err) {
+      fail(err, view);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgot = async (e) => {
+    e.preventDefault();
+    setError(null);
+    if (!isValidEmail(form.email.trim())) {
+      setError({ kind: 'email_invalid', message: 'Escreva o email com que criou a conta.' });
+      return;
+    }
+    setLoading(true);
+    try {
+      await resetPassword(form.email);
+      setNotice(`Se existir uma conta com ${form.email.trim()}, vai receber um link para criar uma nova palavra-passe.`);
+    } catch (err) {
+      fail(err, 'forgot');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setLoading(true);
+    try {
+      await resendConfirmation(form.email);
+      setError(null);
+      setNotice('Reenviámos o email de confirmação. Veja também a pasta de spam.');
+    } catch (err) {
+      fail(err, 'resend');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogle = async () => {
+    setError(null);
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      fail(err, 'google');
+    }
   };
 
   if (!isOpen) return null;
 
+  const titles = {
+    login: ['Bem-vindo de volta', 'Entre na sua conta para encomendar.'],
+    register: ['Criar conta', 'Para acompanhar encomendas e guardar o carrinho.'],
+    forgot: ['Recuperar palavra-passe', 'Enviamos um link para o seu email.'],
+  };
+  const [title, subtitle] = titles[view];
+
   return (
     <>
-      {/* Overlay - sem animação, aparece instantaneamente */}
-      <div
-        onClick={handleClose}
-        className="fixed inset-0 bg-black/80 z-[60] animate-[fadeIn_0.1s_ease-out]"
-        style={{ animationFillMode: 'forwards' }}
-      />
+      <div onClick={handleClose} className="fixed inset-0 bg-black/70 z-[60] animate-fade-in" aria-hidden="true" />
 
-      {/* Modal */}
       <div
-        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
-        w-[95%] max-w-md bg-white rounded-3xl shadow-2xl z-[70] overflow-hidden
-        animate-[fadeIn_0.15s_ease-out]"
-        style={{ animationFillMode: 'forwards' }}
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`${uid}-title`}
+        className="fixed inset-x-3 top-1/2 -translate-y-1/2 mx-auto max-w-md max-h-[calc(100dvh-1.5rem)] overflow-y-auto
+          bg-white rounded-3xl shadow-[0_24px_60px_-12px_rgba(0,0,0,0.35)] z-[70] animate-fade-in"
       >
-        {/* Header com gradiente */}
-        <div className="relative bg-gradient-to-r from-brand-blue to-brand-pink p-6 pb-8">
-          {/* Botão X */}
+        <div className="relative bg-gradient-to-r from-brand-blue to-brand-pink px-6 pt-7 pb-10 text-white text-center">
           <button
             type="button"
             onClick={handleClose}
+            aria-label="Fechar"
             className="absolute top-4 right-4 p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors cursor-pointer"
           >
-            <X size={18} className="text-white" />
+            <X size={18} />
           </button>
-
-          {/* Ícone e título */}
-          <div className="flex flex-col items-center text-white">
-            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mb-3">
-              <Sparkles size={32} className="text-white" />
-            </div>
-            <h2 className="text-2xl font-bold">
-              {isRegistering ? 'Criar Conta' : 'Bem-vindo de Volta!'}
-            </h2>
-            <p className="text-white/80 text-sm mt-1">
-              {isRegistering ? 'Junta-te à família Tralalá' : 'Entra na tua conta'}
-            </p>
+          <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
+            <Sparkles size={28} aria-hidden="true" />
           </div>
+          <h2 id={`${uid}-title`} className="text-2xl font-bold">{title}</h2>
+          <p className="text-white/90 text-sm mt-1">{subtitle}</p>
         </div>
 
-        {/* Conteúdo */}
-        <div className="p-6 pt-4">
-          {/* Tabs - transição rápida com CSS */}
-          <div className="bg-gray-100 rounded-2xl p-1.5 flex mb-6 -mt-8 relative z-10 shadow-lg">
+        <div className="px-6 pb-6">
+          {view !== 'forgot' ? (
+            <div className="bg-gray-100 rounded-2xl p-1.5 flex -mt-6 mb-6 relative z-10 shadow-md" role="tablist">
+              {[
+                ['login', 'Entrar', 'text-brand-blue'],
+                ['register', 'Criar conta', 'text-brand-pink'],
+              ].map(([key, label, activeColor]) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={view === key}
+                  onClick={() => goTo(key)}
+                  className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-colors cursor-pointer
+                    ${view === key ? `bg-white ${activeColor} shadow` : 'text-gray-600 hover:text-gray-800'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          ) : (
             <button
               type="button"
-              onClick={() => { setIsRegistering(false); setError(''); }}
-              className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-colors duration-150 cursor-pointer
-                ${!isRegistering
-                  ? 'bg-white text-brand-blue shadow-md'
-                  : 'text-gray-500 hover:text-gray-700'
-                }`}
+              onClick={() => goTo('login')}
+              className="-mt-2 mb-4 pt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-blue hover:text-brand-pink cursor-pointer"
             >
-              ENTRAR
+              <ArrowLeft size={16} /> Voltar a entrar
             </button>
+          )}
 
-            <button
-              type="button"
-              onClick={() => { setIsRegistering(true); setError(''); }}
-              className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-colors duration-150 cursor-pointer
-                ${isRegistering
-                  ? 'bg-white text-brand-pink shadow-md'
-                  : 'text-gray-500 hover:text-gray-700'
-                }`}
-            >
-              REGISTAR
-            </button>
+          <div aria-live="polite">
+            {error && (
+              <div className="bg-red-50 text-red-700 p-3.5 rounded-xl text-sm mb-4 border border-red-100">
+                <p className="font-semibold">{error.message}</p>
+                {error.kind === 'invalid_credentials' && (
+                  <ul className="mt-2 space-y-1 text-red-700/90 list-disc pl-4">
+                    <li>Confirme se o email está bem escrito.</li>
+                    <li>Se criou a conta com o Google, use “Continuar com Google”.</li>
+                    <li>
+                      Não se lembra da palavra-passe?{' '}
+                      <button type="button" onClick={() => goTo('forgot')} className="underline font-semibold cursor-pointer">
+                        Criar uma nova
+                      </button>
+                    </li>
+                  </ul>
+                )}
+                {error.kind === 'email_not_confirmed' && (
+                  <button type="button" onClick={handleResend} disabled={loading} className="mt-2 underline font-semibold cursor-pointer disabled:opacity-60">
+                    Reenviar email de confirmação
+                  </button>
+                )}
+                {error.kind === 'user_already_exists' && (
+                  <button type="button" onClick={() => goTo('login')} className="mt-2 underline font-semibold cursor-pointer">
+                    Ir para Entrar
+                  </button>
+                )}
+              </div>
+            )}
+            {notice && (
+              <div className="bg-green-50 text-green-800 p-3.5 rounded-xl text-sm mb-4 border border-green-100 font-medium">
+                {notice}
+              </div>
+            )}
           </div>
 
-          {/* Erro - sem animação */}
-          {error && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm mb-4 border border-red-100 font-medium flex items-center gap-2">
-              {error}
-            </div>
-          )}
-
-          {/* Sucesso In-App */}
-          {successMessage && (
-            <div className="bg-green-50 text-green-600 p-3 rounded-xl text-sm mb-4 border border-green-100 font-medium flex items-center gap-2">
-              {successMessage}
-            </div>
-          )}
-
-          {/* Sucesso - sem animação */}
-          {resetSuccess && (
-            <div className="bg-green-50 text-green-600 p-3 rounded-xl text-sm mb-4 border border-green-100 font-medium flex items-center gap-2">
-              {resetSuccess}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Nome / Sobrenome - transição de altura com CSS */}
-            <div
-              className={`flex gap-3 overflow-hidden transition-all duration-150 ${isRegistering ? 'max-h-20 opacity-100 mb-4' : 'max-h-0 opacity-0 -mb-4'
-                }`}
-            >
-              <div className="relative flex-1">
-                <User className="absolute left-4 top-3.5 text-gray-400" size={18} />
+          {view === 'forgot' ? (
+            <form onSubmit={handleForgot} className="space-y-4" noValidate>
+              <Field id={`${uid}-email`} label="Email" icon={Mail}>
                 <input
-                  type="text"
-                  placeholder="Nome"
-                  className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-blue transition-colors"
-                  value={formData.firstName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, firstName: e.target.value })
-                  }
+                  id={`${uid}-email`}
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  placeholder="nome@email.com"
+                  className={inputClass}
+                  value={form.email}
+                  onChange={setField('email')}
                 />
-              </div>
-              <div className="relative flex-1">
-                <User className="absolute left-4 top-3.5 text-gray-400" size={18} />
-                <input
-                  type="text"
-                  placeholder="Apelido"
-                  className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-blue transition-colors"
-                  value={formData.lastName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, lastName: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-
-            {/* Email */}
-            <div className="relative">
-              <Mail className="absolute left-4 top-3.5 text-gray-400" size={18} />
-              <input
-                type="email"
-                required
-                placeholder="exemplo@email.com"
-                className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-blue transition-colors"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
-              />
-            </div>
-
-            {/* Password */}
-            <div className="space-y-4 transition-all duration-150">
-              <div className="relative">
-                <Lock className="absolute left-4 top-3.5 text-gray-400" size={18} />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  placeholder="Palavra-passe"
-                  className="w-full pl-11 pr-11 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-blue transition-colors"
-                  value={formData.password}
-                  onChange={(e) => {
-                    setFormData({ ...formData, password: e.target.value });
-                    if (passwordError) setPasswordError('');
-                  }}
-                  onBlur={() => {
-                    if (formData.password && formData.password.length < 6) {
-                      setPasswordError('A palavra-passe deve ter pelo menos 6 caracteres');
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-3.5 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-
-              {/* Confirm Password - only visible in register mode */}
-              <div
-                className={`relative overflow-hidden transition-all duration-150 ${isRegistering ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}`}
+              </Field>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-brand-blue to-brand-purple text-white font-bold py-3.5 rounded-xl hover:brightness-110 transition disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
               >
-                <Lock className="absolute left-4 top-3.5 text-gray-400" size={18} />
+                {loading ? <Loader2 className="animate-spin" size={20} /> : 'Enviar link'}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+              {isRegistering && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Field id={`${uid}-first`} label="Nome" icon={User}>
+                    <input id={`${uid}-first`} type="text" autoComplete="given-name" className={inputClass} value={form.firstName} onChange={setField('firstName')} />
+                  </Field>
+                  <Field id={`${uid}-last`} label="Apelido" icon={User}>
+                    <input id={`${uid}-last`} type="text" autoComplete="family-name" className={inputClass} value={form.lastName} onChange={setField('lastName')} />
+                  </Field>
+                </div>
+              )}
+
+              <Field id={`${uid}-email`} label="Email" icon={Mail}>
                 <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  required={isRegistering}
-                  placeholder="Confirmar palavra-passe"
-                  className="w-full pl-11 pr-11 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-blue transition-colors"
-                  value={formData.confirmPassword}
-                  onChange={(e) => {
-                    setFormData({ ...formData, confirmPassword: e.target.value });
-                    if (passwordError) setPasswordError('');
-                  }}
+                  id={`${uid}-email`}
+                  type="email"
+                  inputMode="email"
+                  autoComplete={isRegistering ? 'email' : 'username'}
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  placeholder="nome@email.com"
+                  className={inputClass}
+                  value={form.email}
+                  onChange={setField('email')}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-4 top-3.5 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
-                >
-                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
+              </Field>
 
-              {/* Password Error */}
-              {passwordError && (
-                <p className="text-red-500 text-sm font-medium pl-1 -mt-2 mb-2">{passwordError}</p>
+              <Field id={`${uid}-password`} label="Palavra-passe" icon={Lock}>
+                <input
+                  id={`${uid}-password`}
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete={isRegistering ? 'new-password' : 'current-password'}
+                  autoCapitalize="none"
+                  className={`${inputClass} pr-12`}
+                  value={form.password}
+                  onChange={setField('password')}
+                  aria-describedby={isRegistering ? `${uid}-pw-hint` : undefined}
+                />
+                <PasswordToggle shown={showPassword} onToggle={() => setShowPassword((s) => !s)} />
+              </Field>
+              {isRegistering && (
+                <p id={`${uid}-pw-hint`} className="text-xs text-gray-600 -mt-2">Pelo menos 6 caracteres.</p>
               )}
-            </div>
 
-            {/* Esqueci a senha - apenas no tab ENTRAR */}
-            {!isRegistering && (
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsForgotPassword(true);
-                    setError('');
-                  }}
-                  className="text-sm text-brand-blue hover:text-brand-pink font-semibold transition-colors cursor-pointer"
-                >
-                  Esqueci a senha
-                </button>
-              </div>
-            )}
-
-            {/* Formulário de Reset Password - mostrado quando isForgotPassword é true */}
-            {isForgotPassword && (
-              <div className="space-y-3 p-4 bg-blue-50 rounded-xl border border-blue-100">
-                <p className="text-sm text-gray-700 font-medium">Recuperar Senha</p>
-                <form onSubmit={handleResetPassword} className="space-y-3">
-                  <div className="relative">
-                    <Mail className="absolute left-4 top-3.5 text-gray-400" size={18} />
-                    <input
-                      type="email"
-                      placeholder="exemplo@email.com"
-                      className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-brand-blue transition-colors"
-                      value={resetEmail}
-                      onChange={(e) => setResetEmail(e.target.value)}
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="flex-1 bg-gradient-to-r from-brand-blue to-brand-purple text-white font-bold py-2.5 rounded-xl hover:brightness-110 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      {loading ? (
-                        <Loader2 className="animate-spin" size={16} />
-                      ) : (
-                        'Enviar link'
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsForgotPassword(false);
-                        setResetEmail('');
-                        setError('');
-                      }}
-                      className="flex-1 bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl hover:bg-gray-300 transition-colors cursor-pointer"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-
-            {/* Botão principal */}
-            <button
-              type="submit"
-              disabled={loading}
-              className={`w-full text-white font-bold py-4 rounded-xl shadow-lg transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-2 mt-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed
-                ${isRegistering
-                  ? 'bg-gradient-to-r from-brand-pink to-brand-purple hover:brightness-110'
-                  : 'bg-gradient-to-r from-brand-blue to-brand-purple hover:brightness-110'
-                }`}
-            >
-              {loading ? (
-                <Loader2 className="animate-spin" size={20} />
-              ) : isRegistering ? (
-                <>
-                  <Sparkles size={18} />
-                  CRIAR CONTA
-                </>
-              ) : (
-                'ENTRAR'
+              {isRegistering && (
+                <Field id={`${uid}-confirm`} label="Repetir palavra-passe" icon={Lock}>
+                  <input
+                    id={`${uid}-confirm`}
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    autoCapitalize="none"
+                    className={inputClass}
+                    value={form.confirmPassword}
+                    onChange={setField('confirmPassword')}
+                  />
+                </Field>
               )}
-            </button>
-          </form>
 
-          {/* Divider */}
-          <div className="flex items-center gap-4 my-6">
-            <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-xs text-gray-400 font-semibold uppercase">
-              Ou continuar com
-            </span>
-            <div className="flex-1 h-px bg-gray-200" />
-          </div>
+              {!isRegistering && (
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => goTo('forgot')}
+                    className="text-sm text-brand-blue hover:text-brand-pink font-semibold transition-colors cursor-pointer"
+                  >
+                    Esqueci-me da palavra-passe
+                  </button>
+                </div>
+              )}
 
-          {/* Google */}
-          <button
-            type="button"
-            onClick={signInWithGoogle}
-            className="w-full flex items-center justify-center gap-3 py-3.5 rounded-xl
-            border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-colors duration-150 font-semibold text-gray-700 cursor-pointer active:scale-[0.98]"
-          >
-            <img
-              src="https://www.svgrepo.com/show/475656/google-color.svg"
-              alt="Google"
-              className="w-5 h-5"
-            />
-            Continuar com Google
-          </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className={`w-full text-white font-bold py-4 rounded-xl shadow-md transition active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed hover:brightness-110
+                  ${isRegistering ? 'bg-gradient-to-r from-brand-pink to-brand-purple' : 'bg-gradient-to-r from-brand-blue to-brand-purple'}`}
+              >
+                {loading ? <Loader2 className="animate-spin" size={20} /> : isRegistering ? 'Criar conta' : 'Entrar'}
+              </button>
+            </form>
+          )}
+
+          {view !== 'forgot' && (
+            <>
+              <div className="flex items-center gap-4 my-6">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-xs text-gray-600 font-semibold">ou</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
+              <button
+                type="button"
+                onClick={handleGoogle}
+                className="w-full flex items-center justify-center gap-3 py-3.5 rounded-xl border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-colors font-semibold text-gray-700 cursor-pointer active:scale-[0.98]"
+              >
+                <GoogleIcon />
+                Continuar com Google
+              </button>
+            </>
+          )}
         </div>
       </div>
-
-      {/* CSS Keyframes */}
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-      `}</style>
     </>
   );
 };
