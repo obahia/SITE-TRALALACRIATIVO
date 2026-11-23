@@ -1,6 +1,6 @@
 // src/pages/localizacao.jsx
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { Phone, Instagram, MapPin } from 'lucide-react';
 
 const Localizacao = () => {

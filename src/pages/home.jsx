@@ -1,228 +1,248 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { motion as Motion, useReducedMotion } from 'framer-motion';
-import { ArrowRight, MapPin } from 'lucide-react';
+import { motion as Motion, useReducedMotion } from 'motion/react';
+import { ArrowRight } from 'lucide-react';
 
-import ProductCard from '../components/ProductCard';
-import PartyKits from '../components/PartyKits';
+import SpecimenHero from '../components/home/SpecimenHero';
+import KitReceipt from '../components/home/KitReceipt';
+import { Stagger, Item } from '../components/motion/Reveal';
+import { EASE_OUT } from '../components/motion/easing';
 import { useProducts } from '../hooks/useProducts';
-import { OCCASIONS, SHIPPING } from '../data/occasions';
+import { OCCASION_BY_SLUG, SHIPPING } from '../data/occasions';
 import { CONTAINER_CLASS } from '../constants';
 import { formatPriceSimple } from '../utils/formatters';
 
-const HERO_PHOTOS = [
-  { src: '/assets/produtos/kit-premium.webp', alt: 'Mesa de festa com painel safari, cilindros e bandejas', className: 'col-span-7 row-span-2', rotate: -2 },
-  { src: '/assets/produtos/caixinha-luxo.webp', alt: 'Caixinhas luxo com laço lilás', className: 'col-span-5', rotate: 3 },
-  { src: '/assets/produtos/tubete-3d.webp', alt: 'Tubetes com aplicação 3D e nome da criança', className: 'col-span-5', rotate: -3 },
+const CATALOGUE_ORDER = ['Caixinhas e embalagens', 'Lembrancinhas', 'Decoração de mesa', 'Papelaria'];
+
+// Duas ocasiões em painel grande; as outras três em linhas com foto.
+const PANELS = [
+  { slug: 'festas-infantis', field: 'bg-tile-sky', img: '/assets/produtos/caixinha-luxo.webp', fact: 'Caixinhas, topos e lembranças com o personagem' },
+  { slug: 'casamento', field: 'bg-tile-sun', img: '/assets/produtos/cone-personalizado.webp', fact: 'Convites, cones para pétalas e ímanes gravados' },
+];
+const MORE_OCCASIONS = [
+  { slug: 'batizado', img: '/assets/produtos/caixa-padrinhos.webp', fact: 'Caixa para os padrinhos e lembranças em MDF' },
+  { slug: 'empresas', img: '/assets/produtos/sacolinha.webp', fact: 'Brindes com logótipo e fatura com NIF' },
+  { slug: 'individuais', img: '/assets/produtos/nome-mdf.webp', fact: 'Canecas, azulejos e nomes em MDF' },
 ];
 
-const STEPS = [
+const STAGES = [
   {
-    title: 'Escolha e personalize',
-    text: 'Na loja, indique o tema, o nome e a idade em cada produto. Para kits e grandes quantidades, peça orçamento.',
+    name: 'Escolhe',
+    text: 'Na loja ou por orçamento: o produto, o tema, o nome e a idade.',
+    img: '/assets/produtos/convite-impresso.webp',
+    field: 'bg-tile-sky',
+    height: 'lg:h-[30vh]',
+    span: 'lg:col-span-3',
   },
   {
-    title: 'Aprove a arte',
-    text: 'Enviamos a arte para aprovação antes de produzir. Nos kits e orçamentos, a reserva fica feita com 50% de sinal.',
+    name: 'Aprova a arte',
+    text: 'Enviamos a arte antes de produzir. Encomende com 2 a 4 semanas de antecedência.',
+    img: '/assets/produtos/topo-bolo-simples.webp',
+    field: 'bg-tile-sun',
+    height: 'lg:h-[44vh]',
+    span: 'lg:col-span-4',
   },
   {
-    title: 'Produzimos à mão',
-    text: 'Encomende com 2 a 4 semanas de antecedência. O prazo exato depende do projeto e da época do ano.',
-  },
-  {
-    title: 'Envio ou levantamento',
-    text: `CTT para todo o país (${formatPriceSimple(SHIPPING.cttPrice)}, grátis acima de ${SHIPPING.freeFrom} €) ou levantamento grátis em Leiria.`,
+    name: 'Recebe em casa',
+    text: `CTT para todo o país por ${formatPriceSimple(SHIPPING.cttPrice)}, grátis acima de ${SHIPPING.freeFrom} €. Ou levanta em Leiria.`,
+    img: '/assets/produtos/kit-premium.webp',
+    field: 'bg-tile-rose',
+    height: 'lg:h-[60vh]',
+    span: 'lg:col-span-5',
   },
 ];
+
+const priceLabel = (p) => {
+  if (p.sale_mode === 'quote') return p.price_note || 'Sob orçamento';
+  const since = p.price_note?.toLowerCase().startsWith('desde') ? 'desde ' : '';
+  const unit = p.price_note === 'Preço por letra' ? ' /letra' : p.min_quantity > 1 ? ' /un.' : '';
+  return `${since}${formatPriceSimple(Number(p.price))}${unit}`;
+};
 
 const Home = () => {
-  const reduceMotion = useReducedMotion();
-  const { products, loading, error } = useProducts({
-    featuredOnly: true,
-    orderBy: 'sort_order',
-    ascending: true,
-    limit: 8,
-  });
+  const reduce = useReducedMotion();
+  const { products } = useProducts({ orderBy: 'sort_order', ascending: true });
+
+  const catalogue = useMemo(() => {
+    const own = products.filter((p) => p.image_url?.startsWith('/assets/produtos/'));
+    return CATALOGUE_ORDER
+      .map((category) => ({ category, items: own.filter((p) => p.category === category) }))
+      .filter((group) => group.items.length > 0);
+  }, [products]);
 
   return (
-    <div className="pb-8">
-      {/* --- HERO --- */}
-      <section className={`${CONTAINER_CLASS} pt-10 pb-16 md:pt-16 md:pb-24`}>
-        <div className="grid lg:grid-cols-[1.05fr_1fr] gap-12 lg:gap-16 items-center">
-          <div className="max-w-xl">
-            <h1 className="text-[2.6rem] leading-[1.05] sm:text-6xl lg:text-[4.25rem] font-bold text-gray-900 tracking-[-0.02em] text-balance">
-              Cada festa com o seu nome.
-            </h1>
-            <p className="mt-6 text-lg md:text-xl text-gray-700 leading-relaxed text-pretty">
-              Caixinhas, topos de bolo, convites e kits de decoração feitos à mão em Leiria, com o tema, o nome e a idade
-              que escolher. Enviamos para todo o país por CTT.
-            </p>
-            <div className="mt-8 flex flex-col sm:flex-row gap-3">
-              <Link
-                to="/produtos"
-                className="inline-flex items-center justify-center gap-2 bg-brand-blue text-white rounded-2xl h-14 px-8 text-lg font-bold shadow-[0_10px_24px_-10px_rgba(14,165,233,0.7)] hover:brightness-110 transition"
-              >
-                Ver a loja <ArrowRight size={20} />
-              </Link>
-              <Link
-                to="/orcamento"
-                className="inline-flex items-center justify-center gap-2 bg-white text-brand-pink border-2 border-brand-pink/30 rounded-2xl h-14 px-8 text-lg font-bold hover:border-brand-pink transition-colors"
-              >
-                Pedir orçamento
-              </Link>
-            </div>
-            <p className="mt-6 flex items-center gap-2 text-sm text-gray-600">
-              <MapPin size={16} className="text-brand-pink shrink-0" aria-hidden="true" />
-              Levantamento grátis em Leiria · Portes grátis acima de {SHIPPING.freeFrom} €
-            </p>
-          </div>
+    <div>
+      <SpecimenHero products={products} />
 
-          {/* Fotos reais em moldura de polaroid, como no catálogo */}
-          <div className="grid grid-cols-12 grid-rows-2 gap-4 sm:gap-5 max-w-xl mx-auto w-full aspect-[6/5]">
-            {HERO_PHOTOS.map((photo, i) => (
-              <Motion.figure
-                key={photo.src}
-                initial={reduceMotion ? false : { opacity: 0, y: 24, rotate: 0 }}
-                animate={{ opacity: 1, y: 0, rotate: photo.rotate }}
-                transition={{ duration: 0.9, delay: 0.12 * i, ease: [0.16, 1, 0.3, 1] }}
-                className={`${photo.className} bg-white p-2 pb-6 sm:p-2.5 sm:pb-7 rounded-md shadow-[0_14px_30px_-14px_rgba(15,23,42,0.45)] min-h-0`}
-              >
-                <img
-                  src={photo.src}
-                  alt={photo.alt}
-                  className="w-full h-full object-cover rounded-sm"
-                  fetchPriority={i === 0 ? 'high' : undefined}
-                  decoding="async"
+      {/* --- OCASIÕES: dois objetos, dois campos --- */}
+      <section aria-labelledby="ocasioes-title">
+        <div className="grid md:grid-cols-2">
+          {PANELS.map((panel, i) => {
+            const occasion = OCCASION_BY_SLUG[panel.slug];
+            return (
+              <div key={panel.slug} className={`relative ${panel.field} h-[78svh] md:h-[88svh] overflow-hidden group`}>
+                {i === 0 && (
+                  <h2 id="ocasioes-title" className="absolute top-8 left-6 md:top-12 md:left-10 z-10 text-[clamp(1.75rem,2.8vw,2.5rem)] font-bold leading-none tracking-[-0.02em] text-ink max-w-[9ch]">
+                    Para que festa é?
+                  </h2>
+                )}
+                <Motion.img
+                  src={panel.img}
+                  alt=""
+                  loading="lazy"
+                  className="absolute -top-[14%] right-[-8%] w-[78%] md:w-[72%] aspect-[4/5] object-cover rounded-2xl transition-transform duration-700 ease-[var(--ease-soft)] group-hover:scale-[1.03]"
+                  initial={reduce ? false : { y: -60, opacity: 0 }}
+                  whileInView={{ y: 0, opacity: 1 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 1.1, ease: EASE_OUT, delay: i * 0.12 }}
                 />
-              </Motion.figure>
-            ))}
-          </div>
+                <Stagger className="absolute inset-x-6 md:inset-x-10 bottom-7 md:bottom-10 flex flex-col lg:flex-row lg:items-end justify-between gap-5">
+                  <Item>
+                    <p className="text-2xl font-bold text-ink">{occasion.name}</p>
+                    <p className="mt-1 text-lg text-ink">{panel.fact}</p>
+                  </Item>
+                  <Item className="flex gap-2.5 shrink-0">
+                    <Link
+                      to={`/ocasioes/${panel.slug}`}
+                      className="inline-flex items-center justify-center h-12 px-6 rounded-full bg-ink text-paper font-bold transition-transform duration-150 active:scale-[0.98] hover:bg-pink-ink"
+                    >
+                      Ver ideias
+                    </Link>
+                    <Link
+                      to={`/orcamento?ocasiao=${panel.slug}`}
+                      className="inline-flex items-center justify-center h-12 px-6 rounded-full bg-paper text-ink font-bold transition-transform duration-150 active:scale-[0.98] hover:bg-paper/70"
+                    >
+                      Orçamento
+                    </Link>
+                  </Item>
+                </Stagger>
+              </div>
+            );
+          })}
         </div>
+
+        <Stagger as="ul" className={`${CONTAINER_CLASS} py-12 md:py-16 grid md:grid-cols-3 gap-8`} gap={0.09}>
+          {MORE_OCCASIONS.map((o) => (
+            <Item as="li" kind="row" key={o.slug}>
+              <Link to={`/ocasioes/${o.slug}`} className="group flex items-center gap-5">
+                <img src={o.img} alt="" loading="lazy" className="w-20 h-20 md:w-24 md:h-24 rounded-2xl object-cover shrink-0 transition-transform duration-300 group-hover:rotate-[-3deg] group-hover:scale-105" />
+                <span>
+                  <span className="flex items-center gap-1.5 text-2xl font-bold text-ink group-hover:text-pink-ink transition-colors">
+                    {OCCASION_BY_SLUG[o.slug].name}
+                    <ArrowRight size={20} className="transition-transform duration-200 group-hover:translate-x-1" />
+                  </span>
+                  <span className="block mt-0.5 text-base text-ink-soft">{o.fact}</span>
+                </span>
+              </Link>
+            </Item>
+          ))}
+        </Stagger>
       </section>
 
-      {/* --- OCASIÕES --- */}
-      <section className="bg-white border-y border-gray-100 py-16 md:py-20">
-        <div className={CONTAINER_CLASS}>
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 text-balance">Para que festa é?</h2>
-            <p className="text-gray-600 max-w-md">
-              Cada ocasião tem os produtos que mais se pedem para ela. Escolha a sua e veja ideias e preços.
-            </p>
-          </div>
-          <ul className="grid grid-cols-2 md:grid-cols-6 gap-4">
-            {OCCASIONS.map((o, i) => (
-              <li
-                key={o.slug}
-                className={i < 2 ? 'col-span-2 md:col-span-3' : i === OCCASIONS.length - 1 ? 'col-span-2 md:col-span-2' : 'col-span-1 md:col-span-2'}
-              >
-                <Link
-                  to={`/ocasioes/${o.slug}`}
-                  className="group relative block h-full min-h-48 md:min-h-64 rounded-3xl overflow-hidden bg-gray-900"
-                >
-                  <img
-                    src={o.image}
-                    alt=""
-                    loading="lazy"
-                    className="absolute inset-0 w-full h-full object-cover opacity-85 group-hover:scale-[1.03] transition duration-500 ease-out"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
-                  <div className="relative h-full flex flex-col justify-end p-5">
-                    <span className="text-white text-xl md:text-2xl font-bold">{o.name}</span>
-                    <span className="mt-1 inline-flex items-center gap-1 text-white/90 text-sm font-semibold">
-                      Ver ideias <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                    </span>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      {/* --- DESTAQUES --- */}
-      {!error && (loading || products.length > 0) && (
-        <section className={`${CONTAINER_CLASS} py-16 md:py-20`}>
-          <div className="flex items-end justify-between gap-4 mb-8">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900">Os mais pedidos</h2>
-            <Link to="/produtos" className="hidden sm:inline-flex items-center gap-1.5 font-bold text-brand-blue hover:text-brand-pink transition-colors">
-              Ver toda a loja <ArrowRight size={18} />
+      {/* --- CATÁLOGO: menu em duas colunas, foto como marcador --- */}
+      {catalogue.length > 0 && (
+        <section className={`${CONTAINER_CLASS} pt-16 md:pt-28 pb-20 md:pb-32`} aria-labelledby="catalogo-title">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <h2 id="catalogo-title" className="text-[clamp(2.25rem,4.2vw,4rem)] font-bold leading-[0.95] tracking-[-0.03em] text-ink">
+              O catálogo
+            </h2>
+            <Link to="/produtos" className="group inline-flex items-center gap-1.5 text-lg font-bold text-ink underline underline-offset-4 decoration-2 decoration-brand-pink hover:text-pink-ink">
+              Abrir na loja <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
             </Link>
           </div>
-          {loading ? (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6" aria-busy="true">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="aspect-[4/6] rounded-3xl bg-white border border-gray-100 animate-pulse" />
-              ))}
+
+          {catalogue.map(({ category, items }) => (
+            <div key={category} className="mt-16 md:mt-24">
+              <div className="flex items-baseline justify-between gap-4 mb-8 md:mb-10">
+                <h3 className="text-[clamp(1.75rem,2.8vw,2.5rem)] font-bold leading-none tracking-[-0.02em] text-ink">{category}</h3>
+                <span className="text-base text-ink-soft tabular-nums">{items.length} produtos</span>
+              </div>
+              <Stagger as="ul" className="grid md:grid-cols-2 gap-x-16 gap-y-8" gap={0.05} amount={0.1}>
+                {items.map((p) => (
+                  <Item as="li" kind="row" key={p.id}>
+                    <Link to={`/produto/${p.id}`} className="group flex gap-5">
+                      <span className="w-16 h-16 md:w-20 md:h-20 shrink-0 rounded-xl overflow-hidden bg-tile-sky">
+                        <img src={p.image_url} alt="" loading="lazy" className="w-full h-full object-cover transition-transform duration-500 ease-[var(--ease-soft)] group-hover:scale-110" />
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="flex items-baseline justify-between gap-4">
+                          <span className="text-lg font-bold text-ink group-hover:text-pink-ink transition-colors">{p.name}</span>
+                          <span className={`shrink-0 text-lg font-semibold tabular-nums ${p.sale_mode === 'quote' ? 'text-pink-ink' : 'text-ink'}`}>
+                            {priceLabel(p)}
+                          </span>
+                        </span>
+                        <span className="block mt-1 text-base text-ink-soft leading-relaxed line-clamp-2 max-w-[44ch]">{p.description}</span>
+                        {p.min_quantity > 1 && (
+                          <span className="block mt-1 text-base font-semibold text-ink">Mínimo {p.min_quantity} unidades</span>
+                        )}
+                      </span>
+                    </Link>
+                  </Item>
+                ))}
+              </Stagger>
             </div>
-          ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          )}
-          <Link to="/produtos" className="sm:hidden mt-6 flex items-center justify-center gap-1.5 font-bold text-brand-blue">
-            Ver toda a loja <ArrowRight size={18} />
-          </Link>
+          ))}
         </section>
       )}
 
-      {/* --- KITS --- */}
-      <section className="bg-brand-blue/[0.06] py-16 md:py-20">
-        <div className={CONTAINER_CLASS}>
-          <div className="max-w-2xl mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 text-balance">Kits de decoração para a mesa da festa</h2>
-            <p className="mt-3 text-gray-700 text-lg">
-              Painel, estruturas, cilindros e as caixinhas com o tema. Reserve o kit com a data da festa e nós tratamos do resto.
-            </p>
-          </div>
-          <PartyKits />
+      {/* --- KITS: o talão --- */}
+      <KitReceipt />
+
+      {/* --- COMO ENCOMENDAR: blocos que crescem --- */}
+      <section className={`${CONTAINER_CLASS} py-20 md:py-32`} aria-labelledby="como-title">
+        <div className="grid lg:grid-cols-12 gap-x-3 gap-y-10 lg:items-end relative lg:min-h-[78vh]">
+          <h2
+            id="como-title"
+            className="lg:absolute lg:top-0 lg:left-0 lg:w-[56%] text-[clamp(2.25rem,4.2vw,4rem)] font-bold leading-[0.95] tracking-[-0.03em] text-ink"
+          >
+            Como encomendar
+          </h2>
+          {STAGES.map((stage, i) => (
+            <Stagger key={stage.name} className={stage.span} delay={i * 0.12}>
+              <Item kind="grow" className={`${stage.field} ${stage.height} h-[62vw] sm:h-[44vw] rounded-2xl overflow-hidden relative`}>
+                <img
+                  src={stage.img}
+                  alt=""
+                  loading="lazy"
+                  className={`absolute inset-[10%] w-[80%] h-[80%] rounded-xl ${stage.img.includes('convite') ? 'object-contain' : 'object-cover'}`}
+                />
+              </Item>
+              <Item>
+                <p className="mt-5 text-xl font-bold text-ink">{stage.name}</p>
+                <p className="mt-1 text-base text-ink-soft leading-relaxed max-w-[40ch]">{stage.text}</p>
+              </Item>
+            </Stagger>
+          ))}
         </div>
       </section>
 
-      {/* --- COMO ENCOMENDAR --- */}
-      <section className={`${CONTAINER_CLASS} py-16 md:py-20`}>
-        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-10">Como encomendar</h2>
-        <ol className="grid sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-10">
-          {STEPS.map((step, i) => (
-            <li key={step.title} className="relative pl-14">
-              <span className="absolute left-0 top-0 w-10 h-10 rounded-full bg-brand-pink text-white font-bold text-lg flex items-center justify-center tabular-nums" aria-hidden="true">
-                {i + 1}
-              </span>
-              <h3 className="text-xl font-bold text-gray-900">{step.title}</h3>
-              <p className="mt-2 text-gray-700 leading-relaxed">{step.text}</p>
-            </li>
-          ))}
-        </ol>
-        <Link to="/informacoes" className="mt-10 inline-flex items-center gap-1.5 font-bold text-brand-blue hover:text-brand-pink transition-colors">
-          Prazos, envios e pagamentos <ArrowRight size={18} />
-        </Link>
-      </section>
-
-      {/* --- ORÇAMENTO --- */}
-      <section className={`${CONTAINER_CLASS} pb-16`}>
-        <div className="rounded-[2rem] bg-gray-900 text-white px-6 py-10 md:px-14 md:py-14 grid md:grid-cols-[1.4fr_1fr] gap-8 items-center">
-          <div>
-            <h2 className="text-3xl md:text-4xl font-bold text-balance">Casamento, batizado ou evento de empresa?</h2>
-            <p className="mt-4 text-white/85 text-lg max-w-xl">
-              Para muitos convidados, convites ou brindes com logótipo, conte-nos a data e o que imagina.
-              Respondemos com um orçamento à medida.
+      {/* --- ORÇAMENTO: o cartão-resposta --- */}
+      <section className="bg-ink overflow-hidden" aria-labelledby="pedido-title">
+        <div className={`${CONTAINER_CLASS} min-h-[80svh] grid lg:grid-cols-12 gap-10 items-end pt-20`}>
+          <Stagger className="lg:col-span-4 lg:pb-24">
+            <Item as="p" className="text-xl md:text-2xl leading-snug text-paper">
+              Casamentos, batizados e empresas pedem quantidades grandes. Conte-nos a data e o que imagina; respondemos com ideias e preço.
+            </Item>
+          </Stagger>
+          <Motion.div
+            className="lg:col-span-7 lg:col-start-6 bg-paper aspect-[7/5] max-h-[560px] w-full -mb-16 px-8 md:px-12 pt-10 md:pt-14 flex flex-col items-center text-center"
+            initial={reduce ? false : { y: 120, rotate: 6, opacity: 0 }}
+            whileInView={{ y: 0, rotate: 2, opacity: 1 }}
+            viewport={{ once: true, amount: 0.25 }}
+            transition={{ duration: 1.1, ease: EASE_OUT }}
+            style={{ rotate: reduce ? 2 : undefined }}
+          >
+            <h2 id="pedido-title" className="text-[clamp(1.75rem,2.8vw,2.5rem)] font-bold leading-none tracking-[-0.02em] text-ink">Pedir orçamento</h2>
+            <p className="mt-3 text-lg text-ink max-w-[42ch]">
+              Kits, convites, brindes com logótipo ou mais de 100 unidades. A reserva fica feita com 50% de sinal.
             </p>
-          </div>
-          <div className="flex flex-col sm:flex-row md:flex-col xl:flex-row gap-3 md:justify-self-end">
             <Link
               to="/orcamento"
-              className="inline-flex items-center justify-center gap-2 bg-brand-pink text-white rounded-2xl h-14 px-8 text-lg font-bold whitespace-nowrap hover:brightness-110 transition"
+              className="group mt-8 w-full h-14 rounded-full bg-ink text-paper text-lg font-bold inline-flex items-center justify-center gap-2 transition-transform duration-150 active:scale-[0.98] hover:bg-pink-ink"
             >
-              Pedir orçamento <ArrowRight size={20} />
+              Escrever o pedido <ArrowRight size={20} className="transition-transform group-hover:translate-x-1" />
             </Link>
-            <Link
-              to="/ocasioes/empresas"
-              className="inline-flex items-center justify-center rounded-2xl h-14 px-8 text-lg font-bold whitespace-nowrap text-white border-2 border-white/30 hover:border-white transition-colors"
-            >
-              Para empresas
-            </Link>
-          </div>
+          </Motion.div>
         </div>
       </section>
     </div>

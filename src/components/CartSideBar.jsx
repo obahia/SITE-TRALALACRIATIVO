@@ -1,5 +1,5 @@
 import React from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'motion/react';
 import { X, Trash2, ShoppingBag, ArrowRight, FileText, Image as ImageIcon, Plus, Minus, Loader2 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { formatPriceSimple } from '../utils/formatters';

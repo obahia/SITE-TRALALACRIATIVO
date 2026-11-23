@@ -5,7 +5,7 @@ export const OCCASIONS = [
   {
     slug: 'festas-infantis',
     name: 'Festas infantis',
-    title: 'Festa infantil com o tema que ele escolheu',
+    title: 'A festa com o tema escolhido',
     intro:
       'Caixinhas, tubetes, topos e lembranças com o personagem, o nome e a idade. Tudo desenhado de raiz para a festa, não tirado de um molde.',
     image: '/assets/produtos/caixinha-luxo.webp',
@@ -15,7 +15,7 @@ export const OCCASIONS = [
   {
     slug: 'batizado',
     name: 'Batizado',
-    title: 'Batizado com detalhes que ficam na família',
+    title: 'Batizado com o nome do bebé',
     intro:
       'Caixa para convidar os padrinhos, lembranças em MDF, cones para pétalas e a mesa decorada com o nome do bebé.',
     image: '/assets/produtos/caixa-padrinhos.webp',
@@ -25,7 +25,7 @@ export const OCCASIONS = [
   {
     slug: 'casamento',
     name: 'Casamento',
-    title: 'Casamento: da papelaria à lembrança',
+    title: 'Casamento, do convite à lembrança',
     intro:
       'Convites, cones para pétalas, ímanes gravados, rótulos e placards para o plano de mesas. Criamos a arte a partir das vossas cores.',
     image: '/assets/produtos/iman-mdf.webp',
@@ -35,7 +35,7 @@ export const OCCASIONS = [
   {
     slug: 'empresas',
     name: 'Empresas',
-    title: 'Brindes e eventos para empresas',
+    title: 'Brindes e eventos de empresa',
     intro:
       'Brindes com o logótipo, rótulos, sacos e papelaria para eventos, inaugurações e festas de Natal. Quantidades grandes com fatura em nome da empresa.',
     image: '/assets/produtos/sacolinha.webp',
@@ -45,7 +45,7 @@ export const OCCASIONS = [
   {
     slug: 'individuais',
     name: 'Presentes',
-    title: 'Presentes personalizados, um de cada vez',
+    title: 'Presentes feitos para uma pessoa',
     intro:
       'Canecas, azulejos, molduras e nomes em MDF feitos para uma pessoa só. Para oferecer ou para guardar.',
     image: '/assets/produtos/nome-mdf.webp',
