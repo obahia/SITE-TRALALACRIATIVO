@@ -7,7 +7,7 @@ import {
 import {
   ShoppingBag, Package, Users, Euro, ArrowRight, TrendingUp,
   TrendingDown, AlertTriangle, Clock, CheckCircle, XCircle,
-  Truck, RefreshCw,
+  Truck, RefreshCw, FileText,
 } from 'lucide-react';
 import { supabase } from '../../services/supabase';
 import { LoadingSpinner } from '../../components/ui';
@@ -28,8 +28,16 @@ const STATUS_META = {
 
 const PIE_COLORS = ['#f59e0b', '#10b981', '#3b82f6', '#6366f1', '#ef4444'];
 
-const KpiCard = ({ icon: Icon, label, value, sub, trend, color }) => (
-  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3">
+const KpiCard = ({ icon, label, value, sub, trend, color, to }) => {
+  const Icon = icon;
+  const Wrapper = to ? Link : 'div';
+  return (
+  <Wrapper
+    {...(to ? { to } : {})}
+    className={`bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 ${
+      to ? 'hover:border-brand-blue/40 hover:shadow-md transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue' : ''
+    }`}
+  >
     <div className="flex items-center justify-between">
       <span className="text-sm font-medium text-gray-500">{label}</span>
       <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color}`}>
@@ -46,8 +54,9 @@ const KpiCard = ({ icon: Icon, label, value, sub, trend, color }) => (
         {Math.abs(trend).toFixed(1)}% vs mês anterior
       </div>
     )}
-  </div>
-);
+  </Wrapper>
+  );
+};
 
 const CustomTooltipRevenue = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
@@ -81,12 +90,14 @@ const AdminDashboard = () => {
         { count: totalProducts },
         { data: orderItems },
         { data: products },
+        { count: newQuotes, error: quotesError },
       ] = await Promise.all([
         supabase.from('orders').select('id, total_amount, status, created_at, user_id'),
         supabase.from('profiles').select('id, created_at'),
         supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true),
         supabase.from('order_items').select('name, quantity, price'),
         supabase.from('products').select('id, name, stock_quantity, image_url').eq('is_active', true),
+        supabase.from('quote_requests').select('id', { count: 'exact', head: true }).eq('status', 'novo'),
       ]);
 
       const now = new Date();
@@ -133,6 +144,8 @@ const AdminDashboard = () => {
         totalUsers: (profiles || []).length,
         newUsersThisMonth,
         totalProducts: totalProducts || 0,
+        // null = tabela ainda não existe (migração 020 por aplicar)
+        newQuotes: quotesError ? null : newQuotes || 0,
       });
 
       // Receita dos últimos 30 dias agrupada por dia
@@ -194,7 +207,8 @@ const AdminDashboard = () => {
           .filter(p => p.stock_quantity !== null && p.stock_quantity <= 5)
           .sort((a, b) => (a.stock_quantity || 0) - (b.stock_quantity || 0))
       );
-    } catch (_err) {
+    } catch {
+      // Os cartões mostram zeros se a leitura falhar.
     } finally {
       setLoading(false);
     }
@@ -227,7 +241,15 @@ const AdminDashboard = () => {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7 gap-4">
+        <KpiCard
+          icon={FileText}
+          label="Orçamentos novos"
+          value={kpis.newQuotes ?? '—'}
+          sub={kpis.newQuotes === null ? 'migração 020 por aplicar' : 'por responder'}
+          color={kpis.newQuotes > 0 ? 'bg-brand-pink' : 'bg-gray-400'}
+          to="/admin/orcamentos"
+        />
         <KpiCard
           icon={Euro}
           label="Receita Total"

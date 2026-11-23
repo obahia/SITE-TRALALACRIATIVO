@@ -1,158 +1,170 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Search, Package, X } from 'lucide-react';
+
 import ProductCard from '../components/ProductCard';
-import { motion } from 'framer-motion';
-import { supabase } from '../services/supabase'; // Importe o cliente
-import { Search, Package } from 'lucide-react';
+import { useProducts } from '../hooks/useProducts';
+import { OCCASIONS, OCCASION_BY_SLUG } from '../data/occasions';
+import { CONTAINER_CLASS } from '../constants';
+
+const ALL = 'Todos';
+
+const normalize = (text) =>
+  String(text || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+const chipClass = (active) =>
+  `px-4 py-2 rounded-full font-semibold text-sm border-2 transition-colors cursor-pointer whitespace-nowrap ${
+    active ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-800 hover:border-gray-400'
+  }`;
 
 const Produtos = () => {
-  // 1. Estados para guardar dados e controlar carregamento
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState('Todos');
+  const [params, setParams] = useSearchParams();
+  const occasion = OCCASION_BY_SLUG[params.get('ocasiao')] ? params.get('ocasiao') : '';
+  const category = params.get('categoria') || ALL;
   const [searchQuery, setSearchQuery] = useState('');
 
-  // 2. Categorias disponíveis
-  const categories = ['Todos', 'Canecas', 'Camisetas', 'Azulejos', 'Acessórios', 'Kits'];
+  const { products, loading, error } = useProducts({ orderBy: 'sort_order', ascending: true });
 
-  // 3. Buscar produtos no Supabase ao carregar a página
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .eq('is_active', true)
-          .order('created_at', { ascending: false });
+  const updateParam = (key, value) => {
+    const next = new URLSearchParams(params);
+    if (value) next.set(key, value);
+    else next.delete(key);
+    setParams(next, { replace: true });
+  };
 
-        if (error) throw error;
+  const categories = useMemo(() => {
+    const set = new Set(products.map((p) => p.category).filter(Boolean));
+    return [ALL, ...Array.from(set).sort((a, b) => a.localeCompare(b, 'pt'))];
+  }, [products]);
 
-        if (data) {
-          setProducts(data);
-        }
-       } catch (error) {
-         // Error already handled by state
-       } finally {
-        setLoading(false);
-      }
-    };
+  const filteredProducts = useMemo(() => {
+    const q = normalize(searchQuery.trim());
+    return products.filter((p) => {
+      if (occasion && !p.occasions?.includes(occasion)) return false;
+      if (category !== ALL && p.category !== category) return false;
+      if (q && !normalize(`${p.name} ${p.description}`).includes(q)) return false;
+      return true;
+    });
+  }, [products, occasion, category, searchQuery]);
 
-    fetchProducts();
-  }, []);
-
-  // 4. Filtrar produtos por categoria e busca
-  const filteredProducts = products.filter(p => {
-    const matchesCategory = selectedCategory === 'Todos' || p.category === selectedCategory;
-    const matchesSearch = !searchQuery || 
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesCategory && matchesSearch;
-  });
+  const hasFilters = occasion || category !== ALL || searchQuery;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 20 }}
-      transition={{ duration: 0.5 }}
-      className="min-h-screen py-10 px-8 md:px-16 lg:px-32"
-    >
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold text-center text-slate-700 mb-2">Nossos Produtos</h1>
-        <p className="text-center text-gray-500 mb-12">Escolha seu produto favorito e personalize do seu jeito!</p>
-        
-        {/* Search Bar */}
-        <div className="mb-6">
-          <div className="relative max-w-md mx-auto">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-            <input
-              type="text"
-              placeholder="Pesquisar produtos..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-brand-blue focus:ring-2 focus:ring-brand-blue/20 outline-none transition-all duration-300"
-            />
-          </div>
+    <div className={`${CONTAINER_CLASS} py-10 md:py-14`}>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+        <div>
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 tracking-[-0.02em]">Loja</h1>
+          <p className="mt-3 text-gray-700 text-lg max-w-xl">
+            Tudo personalizado com o tema, o nome e a data. Grandes quantidades?{' '}
+            <Link to="/orcamento" className="font-bold text-brand-pink underline underline-offset-2">Peça orçamento</Link>.
+          </p>
         </div>
+        <div className="relative w-full md:max-w-xs">
+          <label htmlFor="pesquisa-produtos" className="sr-only">Pesquisar produtos</label>
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={20} aria-hidden="true" />
+          <input
+            id="pesquisa-produtos"
+            type="search"
+            placeholder="Pesquisar, ex.: caixinha"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 rounded-xl bg-white border border-gray-300 placeholder-gray-500 focus:border-brand-blue focus:ring-4 focus:ring-brand-blue/15 outline-none transition"
+          />
+        </div>
+      </div>
 
-        {/* Category Filter Pills */}
-        <div className="flex flex-wrap justify-center gap-3 mb-8">
-          {categories.map((category) => (
+      {/* Filtros */}
+      <div className="space-y-3 mb-8">
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap" role="group" aria-label="Ocasião">
+          <button type="button" onClick={() => updateParam('ocasiao', '')} className={chipClass(!occasion)} aria-pressed={!occasion}>
+            Todas as ocasiões
+          </button>
+          {OCCASIONS.map((o) => (
             <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              className={`px-6 py-2 rounded-xl font-medium transition-all duration-300 cursor-pointer ${
-                selectedCategory === category
-                  ? 'bg-brand-blue text-white shadow-md'
-                  : 'bg-gray-100 text-gray-600 hover:bg-brand-blue/10'
-              }`}
+              key={o.slug}
+              type="button"
+              onClick={() => updateParam('ocasiao', o.slug)}
+              className={chipClass(occasion === o.slug)}
+              aria-pressed={occasion === o.slug}
             >
-              {category}
+              {o.name}
             </button>
           ))}
         </div>
-
-        {/* Product Count */}
-        {!loading && (
-          <div className="text-center mb-6 text-gray-500 text-sm">
-            {filteredProducts.length} {filteredProducts.length === 1 ? 'produto' : 'produtos'}
-          </div>
-        )}
-        
-        {/* Loading State */}
-        {loading && (
-          <div className="text-center py-20 text-gray-400">
-            <p>Carregando catálogo...</p>
-          </div>
-        )}
-
-        {/* Empty State (quando filtros não retornam resultados) */}
-        {!loading && filteredProducts.length === 0 && (
-          <div className="text-center py-20 text-gray-400">
-            <Package size={48} className="mx-auto mb-4 opacity-30" />
-            <p className="text-lg">Nenhum produto encontrado</p>
-            <p className="text-sm mt-2">Tente ajustar sua busca ou filtros</p>
-          </div>
-        )}
-
-        {/* Grid de Produtos com Stagger Animation */}
-        {!loading && filteredProducts.length > 0 && (
-          <motion.div 
-            key={selectedCategory + searchQuery}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-            initial="hidden"
-            animate="visible"
-            variants={{
-              visible: {
-                transition: {
-                  staggerChildren: 0.05
-                }
-              }
-            }}
-          >
-            {filteredProducts.map((produto) => (
-              <motion.div
-                key={produto.id}
-                variants={{
-                  hidden: { opacity: 0, y: 20 },
-                  visible: { opacity: 1, y: 0 }
-                }}
-                transition={{ duration: 0.4 }}
+        {categories.length > 2 && (
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap" role="group" aria-label="Categoria">
+            {categories.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => updateParam('categoria', c === ALL ? '' : c)}
+                aria-pressed={category === c}
+                className={`px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                  category === c ? 'bg-brand-blue/10 text-brand-blue' : 'text-gray-700 hover:bg-white'
+                }`}
               >
-                <ProductCard
-                  id={produto.id}
-                  title={produto.name}
-                  description={produto.description}
-                  price={produto.price}
-                  image={produto.image_url}
-                  stockQuantity={produto.stock_quantity}
-                />
-              </motion.div>
+                {c === ALL ? 'Todas as categorias' : c}
+              </button>
             ))}
-          </motion.div>
+          </div>
         )}
       </div>
-    </motion.div>
+
+      {!loading && !error && (
+        <div className="flex items-center gap-3 mb-5 text-sm text-gray-600" aria-live="polite">
+          <span className="tabular-nums">
+            {filteredProducts.length} {filteredProducts.length === 1 ? 'produto' : 'produtos'}
+          </span>
+          {hasFilters && (
+            <button
+              type="button"
+              onClick={() => { setSearchQuery(''); setParams({}, { replace: true }); }}
+              className="inline-flex items-center gap-1 font-semibold text-brand-blue hover:text-brand-pink cursor-pointer"
+            >
+              <X size={14} /> Limpar filtros
+            </button>
+          )}
+        </div>
+      )}
+
+      {loading && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6" aria-busy="true">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="aspect-[4/6] rounded-3xl bg-white border border-gray-100 animate-pulse" />
+          ))}
+        </div>
+      )}
+
+      {error && (
+        <div className="text-center py-16 text-gray-700">
+          <p className="text-lg font-semibold">Não conseguimos carregar a loja.</p>
+          <button type="button" onClick={() => window.location.reload()} className="mt-3 font-bold text-brand-blue underline cursor-pointer">
+            Tentar de novo
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && filteredProducts.length === 0 && (
+        <div className="text-center py-16 text-gray-600">
+          <Package size={48} className="mx-auto mb-4 text-gray-400" aria-hidden="true" />
+          <p className="text-lg font-semibold text-gray-800">Nenhum produto com estes filtros.</p>
+          <p className="mt-2">
+            Não encontra o que procura?{' '}
+            <Link to={`/orcamento${occasion ? `?ocasiao=${occasion}` : ''}`} className="font-bold text-brand-pink underline">
+              Peça-nos um orçamento
+            </Link>.
+          </p>
+        </div>
+      )}
+
+      {!loading && !error && filteredProducts.length > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+          {filteredProducts.map((produto) => (
+            <ProductCard key={produto.id} product={produto} />
+          ))}
+        </div>
+      )}
+    </div>
   );
 };
 

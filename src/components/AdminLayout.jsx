@@ -4,7 +4,8 @@ import {
   LayoutDashboard, 
   ShoppingBag, 
   Package, 
-  Users, 
+  Users,
+  FileText,
   LogOut, 
   Menu, 
   X,
@@ -23,8 +24,9 @@ const AdminLayout = ({ children }) => {
   const menuItems = [
     { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/admin/pedidos', icon: ShoppingBag, label: 'Pedidos' },
+    { path: '/admin/orcamentos', icon: FileText, label: 'Orçamentos' },
     { path: '/admin/produtos', icon: Package, label: 'Produtos' },
-    { path: '/admin/usuarios', icon: Users, label: 'Usuários' },
+    { path: '/admin/usuarios', icon: Users, label: 'Utilizadores' },
   ];
 
   const handleLogout = async () => {
@@ -63,6 +65,8 @@ const AdminLayout = ({ children }) => {
               <Link
                 key={item.path}
                 to={item.path}
+                title={isSidebarOpen ? undefined : item.label}
+                aria-label={item.label}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                   isActive 
                     ? 'bg-gradient-to-r from-brand-pink to-brand-purple text-white' 

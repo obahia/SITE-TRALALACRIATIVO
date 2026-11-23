@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, renderHook, act } from '@testing-library/react';
 import { CartProvider, useCart } from '../context/CartContext';
 import { AuthProvider } from '../context/AuthContext';
+import { MemoryRouter } from 'react-router-dom';
 
 // Mock Supabase
 vi.mock('../services/supabase', () => ({
@@ -60,10 +61,13 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock
 });
 
+// CartProvider usa useNavigate, por isso precisa de um Router.
 const Wrapper = ({ children }) => (
-  <AuthProvider>
-    <CartProvider>{children}</CartProvider>
-  </AuthProvider>
+  <MemoryRouter>
+    <AuthProvider>
+      <CartProvider>{children}</CartProvider>
+    </AuthProvider>
+  </MemoryRouter>
 );
 
 describe('CartContext', () => {

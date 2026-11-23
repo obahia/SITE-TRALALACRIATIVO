@@ -96,6 +96,7 @@ describe('AuthContext', () => {
       email: 'new@example.com',
       password: 'password123',
       options: {
+        emailRedirectTo: window.location.origin,
         data: {
           first_name: 'John',
           last_name: 'Doe',

@@ -13,9 +13,40 @@ import {
   Upload,
   AlertTriangle,
   Hash,
+  Star,
 } from 'lucide-react';
 import { supabase } from '../../services/supabase';
 import { isValidProductData } from '../../utils/validation';
+import { OCCASIONS, OCCASION_BY_SLUG } from '../../data/occasions';
+
+const SALE_MODE_OPTIONS = [
+  { value: 'cart', label: 'Venda online' },
+  { value: 'quote', label: 'Sob orçamento' },
+];
+
+const DEFAULT_SORT_ORDER = 100;
+
+const emptyForm = {
+  name: '',
+  description: '',
+  price: '',
+  category: '',
+  image_url: '',
+  is_active: true,
+  stock_quantity: '',
+  customization_options: [],
+  occasions: [],
+  min_quantity: '1',
+  is_featured: false,
+  sort_order: String(DEFAULT_SORT_ORDER),
+  sale_mode: 'cart',
+  price_note: '',
+};
+
+const parseIntOr = (value, fallback) => {
+  const n = parseInt(value, 10);
+  return Number.isNaN(n) ? fallback : n;
+};
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
@@ -29,18 +60,7 @@ const AdminProducts = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef(null);
 
-  const CATEGORY_OPTIONS = ['Canecas', 'Camisetas', 'Azulejos', 'Acessórios', 'Kits'];
-
-  const emptyForm = {
-    name: '',
-    description: '',
-    price: '',
-    category: '',
-    image_url: '',
-    is_active: true,
-    stock_quantity: '',
-    customization_options: [],
-  };
+  const [formError, setFormError] = useState(null);
 
   const [formData, setFormData] = useState(emptyForm);
 
@@ -56,14 +76,21 @@ const AdminProducts = () => {
         .order('created_at', { ascending: false });
       if (error) throw error;
       setProducts(data || []);
-    } catch (_error) {
+    } catch {
+      // Lista fica vazia; o admin pode recarregar a página.
     } finally {
       setLoading(false);
     }
   };
 
+  // Categorias existentes na tabela, para o datalist do formulário.
+  const categoryOptions = [...new Set(products.map((p) => p.category).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, 'pt')
+  );
+
   const handleCreate = () => {
     setFormData(emptyForm);
+    setFormError(null);
     setIsCreating(true);
     setIsEditing(true);
   };
@@ -78,7 +105,14 @@ const AdminProducts = () => {
       is_active: product.is_active ?? true,
       stock_quantity: product.stock_quantity?.toString() ?? '',
       customization_options: product.customization_options || [],
+      occasions: product.occasions || [],
+      min_quantity: String(product.min_quantity ?? 1),
+      is_featured: product.is_featured ?? false,
+      sort_order: String(product.sort_order ?? DEFAULT_SORT_ORDER),
+      sale_mode: product.sale_mode || 'cart',
+      price_note: product.price_note || '',
     });
+    setFormError(null);
     setSelectedProduct(product);
     setIsEditing(true);
     setIsCreating(false);
@@ -90,7 +124,7 @@ const AdminProducts = () => {
       const { error } = await supabase.from('products').delete().eq('id', productId);
       if (error) throw error;
       setProducts(products.filter((p) => p.id !== productId));
-    } catch (_error) {
+    } catch {
       alert('Erro ao eliminar produto');
     }
   };
@@ -115,33 +149,65 @@ const AdminProducts = () => {
         .getPublicUrl(fileName);
 
       setFormData((prev) => ({ ...prev, image_url: urlData.publicUrl }));
-    } catch (_error) {
+    } catch {
       alert('Erro ao fazer upload da imagem');
     } finally {
       setUploadingImage(false);
     }
   };
 
+  const toggleOccasion = (slug) => {
+    setFormData((prev) => ({
+      ...prev,
+      occasions: prev.occasions.includes(slug)
+        ? prev.occasions.filter((o) => o !== slug)
+        : [...prev.occasions, slug],
+    }));
+  };
+
   const handleSave = async () => {
-    const validation = isValidProductData(formData);
-    if (!validation.isValid) {
-      alert(validation.errors.join('\n'));
+    const isQuote = formData.sale_mode === 'quote';
+    const priceNum = parseFloat(formData.price);
+    // O validador exige preço > 0 e stock numérico. Produtos sob orçamento podem ter preço 0
+    // e stock vazio significa ilimitado, por isso só adaptamos o que é validado.
+    const validation = isValidProductData({
+      ...formData,
+      price: isQuote && !(priceNum > 0) ? '1' : formData.price,
+      stock_quantity: formData.stock_quantity === '' ? undefined : formData.stock_quantity,
+    });
+    const errors = [...validation.errors];
+    const minQty = parseInt(formData.min_quantity, 10);
+    if (Number.isNaN(minQty) || minQty < 1) {
+      errors.push('Quantidade mínima deve ser um número inteiro maior ou igual a 1');
+    }
+    if (formData.sort_order !== '' && Number.isNaN(parseInt(formData.sort_order, 10))) {
+      errors.push('Ordem deve ser um número inteiro');
+    }
+    if (errors.length > 0) {
+      setFormError(errors);
       return;
     }
 
     setSaving(true);
+    setFormError(null);
     try {
       const stockVal = formData.stock_quantity === '' ? null : parseInt(formData.stock_quantity, 10);
 
       const productData = {
         name: formData.name,
         description: formData.description,
-        price: parseFloat(formData.price),
-        category: formData.category || null,
-        image_url: formData.image_url,
+        price: Number.isNaN(priceNum) ? 0 : priceNum,
+        category: formData.category.trim() || null,
+        image_url: formData.image_url.trim(),
         is_active: formData.is_active,
         stock_quantity: isNaN(stockVal) ? null : stockVal,
         customization_options: formData.customization_options,
+        occasions: formData.occasions,
+        min_quantity: minQty,
+        is_featured: formData.is_featured,
+        sort_order: parseIntOr(formData.sort_order, DEFAULT_SORT_ORDER),
+        sale_mode: formData.sale_mode,
+        price_note: formData.price_note.trim() || null,
       };
 
       if (isCreating) {
@@ -164,8 +230,8 @@ const AdminProducts = () => {
       }
 
       handleCancel();
-    } catch (_error) {
-      alert('Erro ao guardar produto');
+    } catch (error) {
+      setFormError([`Erro ao guardar produto${error?.message ? `: ${error.message}` : ''}`]);
     } finally {
       setSaving(false);
     }
@@ -175,6 +241,7 @@ const AdminProducts = () => {
     setSelectedProduct(null);
     setIsEditing(false);
     setIsCreating(false);
+    setFormError(null);
   };
 
   const addCustomizationOption = () => {
@@ -211,7 +278,10 @@ const AdminProducts = () => {
   };
 
   const filteredProducts = products.filter((product) => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const term = searchTerm.toLowerCase();
+    const matchesSearch =
+      product.name.toLowerCase().includes(term) ||
+      (product.category || '').toLowerCase().includes(term);
     const matchesActive = showInactive || product.is_active;
     return matchesSearch && matchesActive;
   });
@@ -293,13 +363,42 @@ const AdminProducts = () => {
                       {stockLabel.text}
                     </span>
                   )}
+                  {product.sale_mode === 'quote' && (
+                    <span className="bg-brand-purple text-white px-2 py-0.5 rounded-full text-xs font-medium">
+                      Sob orçamento
+                    </span>
+                  )}
                 </div>
+                {product.is_featured && (
+                  <span
+                    className="absolute top-2 right-2 bg-amber-400 text-white p-1.5 rounded-full"
+                    title="Destaque na página inicial"
+                  >
+                    <Star size={14} fill="currentColor" aria-hidden="true" />
+                    <span className="sr-only">Destaque na página inicial</span>
+                  </span>
+                )}
               </div>
               <div className="p-4">
                 <h3 className="font-bold text-gray-800 mb-1 truncate">{product.name}</h3>
-                <p className="text-brand-blue font-bold text-lg mb-3">
-                  {formatCurrency(product.price)}
+                {product.category && (
+                  <p className="text-xs text-gray-400 mb-1 truncate">{product.category}</p>
+                )}
+                <p className="text-brand-blue font-bold text-lg">
+                  {product.price_note || formatCurrency(product.price)}
                 </p>
+                <p className="text-xs text-gray-500 mb-2">
+                  Mín. {product.min_quantity ?? 1} un. · Ordem {product.sort_order ?? DEFAULT_SORT_ORDER}
+                </p>
+                {product.occasions?.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {product.occasions.map((slug) => (
+                      <span key={slug} className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs">
+                        {OCCASION_BY_SLUG[slug]?.name || slug}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleEdit(product)}
@@ -412,20 +511,113 @@ const AdminProducts = () => {
 
               {/* Category */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
-                <select
+                <label htmlFor="product-category" className="block text-sm font-medium text-gray-700 mb-1">Categoria *</label>
+                <input
+                  id="product-category"
+                  type="text"
+                  list="product-category-options"
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-blue"
-                >
-                  <option value="">Sem categoria</option>
-                  {CATEGORY_OPTIONS.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
+                  placeholder="Escolhe uma existente ou escreve uma nova"
+                />
+                <datalist id="product-category-options">
+                  {categoryOptions.map((cat) => (
+                    <option key={cat} value={cat} />
                   ))}
-                </select>
+                </datalist>
               </div>
+
+              {/* Venda + nota de preço */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="product-sale-mode" className="block text-sm font-medium text-gray-700 mb-1">Modo de venda</label>
+                  <select
+                    id="product-sale-mode"
+                    value={formData.sale_mode}
+                    onChange={(e) => setFormData({ ...formData, sale_mode: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-blue"
+                  >
+                    {SALE_MODE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                  {formData.sale_mode === 'quote' && (
+                    <p className="text-xs text-gray-500 mt-1">O botão do produto leva ao pedido de orçamento. O preço pode ficar a 0.</p>
+                  )}
+                </div>
+                <div>
+                  <label htmlFor="product-price-note" className="block text-sm font-medium text-gray-700 mb-1">Nota de preço</label>
+                  <input
+                    id="product-price-note"
+                    type="text"
+                    maxLength={60}
+                    value={formData.price_note}
+                    onChange={(e) => setFormData({ ...formData, price_note: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-blue"
+                    placeholder="Ex: Desde 22 €"
+                  />
+                </div>
+              </div>
+
+              {/* Quantidade mínima + ordem */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="product-min-qty" className="block text-sm font-medium text-gray-700 mb-1">Quantidade mínima</label>
+                  <input
+                    id="product-min-qty"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={formData.min_quantity}
+                    onChange={(e) => setFormData({ ...formData, min_quantity: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-blue"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="product-sort-order" className="block text-sm font-medium text-gray-700 mb-1">Ordem (menor primeiro)</label>
+                  <input
+                    id="product-sort-order"
+                    type="number"
+                    step="1"
+                    value={formData.sort_order}
+                    onChange={(e) => setFormData({ ...formData, sort_order: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-blue"
+                  />
+                </div>
+              </div>
+
+              {/* Ocasiões */}
+              <fieldset>
+                <legend className="block text-sm font-medium text-gray-700 mb-2">Ocasiões</legend>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {OCCASIONS.map((occ) => (
+                    <label
+                      key={occ.slug}
+                      className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.occasions.includes(occ.slug)}
+                        onChange={() => toggleOccasion(occ.slug)}
+                        className="w-4 h-4 rounded"
+                      />
+                      <span className="text-sm">{occ.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              {/* Destaque */}
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.is_featured}
+                  onChange={(e) => setFormData({ ...formData, is_featured: e.target.checked })}
+                  className="w-5 h-5 rounded"
+                />
+                <span className="text-sm text-gray-700">Destaque na página inicial</span>
+              </label>
 
               {/* Image — upload ou URL */}
               <div>
@@ -453,11 +645,13 @@ const AdminProducts = () => {
                   />
                 </div>
                 <input
-                  type="url"
+                  type="text"
+                  inputMode="url"
+                  aria-label="URL ou caminho da imagem"
                   value={formData.image_url}
                   onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-brand-blue text-sm"
-                  placeholder="Ou cola um URL de imagem..."
+                  placeholder="Ou cola um URL ou caminho (ex: /assets/produtos/caixinha-3d.webp)"
                 />
                 {formData.image_url && (
                   <div className="mt-3 relative aspect-video bg-gray-100 rounded-xl overflow-hidden">
@@ -556,6 +750,14 @@ const AdminProducts = () => {
                 </div>
               </div>
             </div>
+
+            {formError && (
+              <div role="alert" className="mx-6 mb-2 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 space-y-1">
+                {formError.map((msg) => (
+                  <p key={msg}>{msg}</p>
+                ))}
+              </div>
+            )}
 
             <div className="p-6 border-t border-gray-100 flex gap-3">
               <button
