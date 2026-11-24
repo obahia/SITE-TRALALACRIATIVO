@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion as Motion, useReducedMotion } from 'motion/react';
 import { ArrowRight } from 'lucide-react';
 
-import SpecimenHero from '../components/home/SpecimenHero';
+import BrandHero from '../components/home/BrandHero';
 import KitReceipt from '../components/home/KitReceipt';
 import { Stagger, Item } from '../components/motion/Reveal';
 import { EASE_OUT } from '../components/motion/easing';
@@ -72,7 +72,7 @@ const Home = () => {
 
   return (
     <div>
-      <SpecimenHero products={products} />
+      <BrandHero />
 
       {/* --- OCASIÕES: dois objetos, dois campos --- */}
       <section aria-labelledby="ocasioes-title">

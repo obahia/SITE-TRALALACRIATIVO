@@ -91,3 +91,30 @@ select {
     scroll-behavior: auto !important;
   }
 }
+
+/* Hero original: a palavra "coração" com uma onda de cor lenta */
+@keyframes textWave {
+  from {
+    background-position: 0% 50%;
+  }
+
+  to {
+    background-position: 200% 50%;
+  }
+}
+
+.text-wave-effect {
+  /* tons mais escuros que o original para manter contraste de texto grande (>= 3:1) */
+  background-image: linear-gradient(to right, #0087a6, #00a6c4, #0087a6);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: textWave 8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .text-wave-effect {
+    animation: none;
+  }
+}
