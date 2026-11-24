@@ -5,6 +5,7 @@ import { ArrowRight } from 'lucide-react';
 
 import BrandHero from '../components/home/BrandHero';
 import KitReceipt from '../components/home/KitReceipt';
+import CatalogueTabs from '../components/home/CatalogueTabs';
 import { Stagger, Item } from '../components/motion/Reveal';
 import { EASE_OUT } from '../components/motion/easing';
 import { useProducts } from '../hooks/useProducts';
@@ -52,16 +53,9 @@ const STAGES = [
   },
 ];
 
-const priceLabel = (p) => {
-  if (p.sale_mode === 'quote') return p.price_note || 'Sob orçamento';
-  const since = p.price_note?.toLowerCase().startsWith('desde') ? 'desde ' : '';
-  const unit = p.price_note === 'Preço por letra' ? ' /letra' : p.min_quantity > 1 ? ' /un.' : '';
-  return `${since}${formatPriceSimple(Number(p.price))}${unit}`;
-};
-
 const Home = () => {
   const reduce = useReducedMotion();
-  const { products } = useProducts({ orderBy: 'sort_order', ascending: true });
+  const { products } = useProducts({ orderBy: 'sort_order', ascending: true, onlyWithPhoto: true });
 
   const catalogue = useMemo(() => {
     const own = products.filter((p) => p.image_url?.startsWith('/assets/produtos/'));
@@ -139,51 +133,8 @@ const Home = () => {
         </Stagger>
       </section>
 
-      {/* --- CATÁLOGO: menu em duas colunas, foto como marcador --- */}
-      {catalogue.length > 0 && (
-        <section className={`${CONTAINER_CLASS} pt-16 md:pt-28 pb-20 md:pb-32`} aria-labelledby="catalogo-title">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <h2 id="catalogo-title" className="text-[clamp(2.25rem,4.2vw,4rem)] font-bold leading-[0.95] tracking-[-0.03em] text-ink">
-              O catálogo
-            </h2>
-            <Link to="/produtos" className="group inline-flex items-center gap-1.5 text-lg font-bold text-ink underline underline-offset-4 decoration-2 decoration-brand-pink hover:text-pink-ink">
-              Abrir na loja <ArrowRight size={18} className="transition-transform group-hover:translate-x-1" />
-            </Link>
-          </div>
-
-          {catalogue.map(({ category, items }) => (
-            <div key={category} className="mt-16 md:mt-24">
-              <div className="flex items-baseline justify-between gap-4 mb-8 md:mb-10">
-                <h3 className="text-[clamp(1.75rem,2.8vw,2.5rem)] font-bold leading-none tracking-[-0.02em] text-ink">{category}</h3>
-                <span className="text-base text-ink-soft tabular-nums">{items.length} produtos</span>
-              </div>
-              <Stagger as="ul" className="grid md:grid-cols-2 gap-x-16 gap-y-8" gap={0.05} amount={0.1}>
-                {items.map((p) => (
-                  <Item as="li" kind="row" key={p.id}>
-                    <Link to={`/produto/${p.id}`} className="group flex gap-5">
-                      <span className="w-16 h-16 md:w-20 md:h-20 shrink-0 rounded-xl overflow-hidden bg-tile-sky">
-                        <img src={p.image_url} alt="" loading="lazy" className="w-full h-full object-cover transition-transform duration-500 ease-[var(--ease-soft)] group-hover:scale-110" />
-                      </span>
-                      <span className="flex-1 min-w-0">
-                        <span className="flex items-baseline justify-between gap-4">
-                          <span className="text-lg font-bold text-ink group-hover:text-pink-ink transition-colors">{p.name}</span>
-                          <span className={`shrink-0 text-lg font-semibold tabular-nums ${p.sale_mode === 'quote' ? 'text-pink-ink' : 'text-ink'}`}>
-                            {priceLabel(p)}
-                          </span>
-                        </span>
-                        <span className="block mt-1 text-base text-ink-soft leading-relaxed line-clamp-2 max-w-[44ch]">{p.description}</span>
-                        {p.min_quantity > 1 && (
-                          <span className="block mt-1 text-base font-semibold text-ink">Mínimo {p.min_quantity} unidades</span>
-                        )}
-                      </span>
-                    </Link>
-                  </Item>
-                ))}
-              </Stagger>
-            </div>
-          ))}
-        </section>
-      )}
+      {/* --- CATÁLOGO: separadores por categoria, cartões tipo polaroid --- */}
+      {catalogue.length > 0 && <CatalogueTabs groups={catalogue} />}
 
       {/* --- KITS: o talão --- */}
       <KitReceipt />

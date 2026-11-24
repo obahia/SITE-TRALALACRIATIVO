@@ -18,6 +18,11 @@
   --color-ink: #16151a;
   --color-ink-soft: #4b4954;
   --color-paper: #ffffff;
+  /* Turquesa do logótipo e dos posts do Instagram */
+  --color-teal: #1aa6bd;
+  --color-teal-ink: #0b7183;
+  --color-tile-lilac: #ead9fb;
+  --color-tile-peach: #fde0cf;
   --color-pink-ink: #be185d; /* rosa da marca escurecido: texto e botões com contraste AA */
   --color-tile-sky: #d3ecfa;
   --color-tile-rose: #fbd9e8;

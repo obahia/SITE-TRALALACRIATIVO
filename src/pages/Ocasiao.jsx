@@ -18,6 +18,7 @@ const Ocasiao = () => {
     occasion: occasion ? slug : '__none__',
     orderBy: 'sort_order',
     ascending: true,
+    onlyWithPhoto: true,
   });
 
   if (!occasion) return <NotFound />;
