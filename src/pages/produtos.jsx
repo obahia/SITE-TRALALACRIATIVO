@@ -24,7 +24,7 @@ const Produtos = () => {
   const category = params.get('categoria') || ALL;
   const [searchQuery, setSearchQuery] = useState('');
 
-  const { products, loading, error } = useProducts({ orderBy: 'sort_order', ascending: true });
+  const { products, loading, error } = useProducts({ orderBy: 'sort_order', ascending: true, onlyWithPhoto: true });
 
   const updateParam = (key, value) => {
     const next = new URLSearchParams(params);

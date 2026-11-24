@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 
+// Fotografia real: não vazia e não um marcador de posição (placehold.co).
+export const hasPhoto = (p) => Boolean(p?.image_url) && !/placehold\.co/i.test(p.image_url);
+
 export const useProducts = (options = {}) => {
   const {
     limit = null,
@@ -8,6 +11,7 @@ export const useProducts = (options = {}) => {
     ascending = false,
     occasion = null, // slug de src/data/occasions.js
     featuredOnly = false,
+    onlyWithPhoto = false, // loja pública: esconde artigos ainda sem fotografia
   } = options;
   
   const [products, setProducts] = useState([]);
@@ -56,7 +60,8 @@ export const useProducts = (options = {}) => {
 
         if (fetchError) throw fetchError;
 
-        if (!cancelled) setProducts(data || []);
+        const list = data || [];
+        if (!cancelled) setProducts(onlyWithPhoto ? list.filter(hasPhoto) : list);
        } catch (err) {
          if (!cancelled) setError(err.message);
        } finally {
@@ -66,7 +71,7 @@ export const useProducts = (options = {}) => {
 
     fetchProducts();
     return () => { cancelled = true; };
-  }, [limit, orderBy, ascending, occasion, featuredOnly]);
+  }, [limit, orderBy, ascending, occasion, featuredOnly, onlyWithPhoto]);
 
   return { products, loading, error };
 };
