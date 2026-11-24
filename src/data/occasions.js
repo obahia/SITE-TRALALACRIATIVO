@@ -37,10 +37,10 @@ export const OCCASIONS = [
     name: 'Empresas',
     title: 'Brindes e eventos de empresa',
     intro:
-      'Brindes com o logótipo, rótulos, sacos e papelaria para eventos, inaugurações e festas de Natal. Quantidades grandes com fatura em nome da empresa.',
+      'Brindes com o logótipo, rótulos, sacos e convites para eventos, inaugurações e festas de Natal. Quantidades grandes com fatura em nome da empresa.',
     image: '/assets/produtos/sacolinha.webp',
     showKits: false,
-    ideas: ['Brindes com logótipo', 'Papelaria para eventos', 'Encomendas de grande volume'],
+    ideas: ['Brindes com logótipo', 'Convites e rótulos para eventos', 'Encomendas de grande volume'],
   },
   {
     slug: 'individuais',

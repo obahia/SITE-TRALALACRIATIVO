@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          "src/components/home/BrandHero.jsx"
+        ],
+        "createdAt": "2026-11-24T09:10:33.081Z",
+        "reason": "user confirmed: asked to restore the original brand hero with gradient headline (2026-11-24)"
+      },
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          "src/index.css"
+        ],
+        "createdAt": "2026-11-24T09:16:02.468Z",
+        "reason": "user confirmed: original hero wave effect on 'coração' restored at client request (2026-11-24)"
+      }
+    ]
+  }
+}
